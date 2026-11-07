@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><AssemblyName>session-harness</AssemblyName></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="QuickFIXn.Core" Version="[1.14.1]" />
+    <PackageReference Include="QuickFIXn.FIX44" Version="[1.14.1]" />
+    <Content Include="../../vendor/FIX44.xml" Link="FIX44.xml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <InternalsVisibleTo Include="SessionHarness.Tests" />
+  </ItemGroup>
+</Project>

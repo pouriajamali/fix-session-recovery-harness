@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.2",
+        "contentHash": "3iE7UF7MQkCv1cxzCahz+Y/guQbTqieyxyaWKhrRO91itI9cOKO76OHeQDahqG4MmW5umr3CcCvGmK92lWNlbg=="
+      },
+      "Microsoft.Extensions.Logging.Abstractions": {
+        "type": "Transitive",
+        "resolved": "8.0.3",
+        "contentHash": "dL0QGToTxggRLMYY4ZYX5AMwBb+byQBd/5dMiZE07Nv73o6I5Are3C7eQTh7K2+A4ct0PVISSr7TZANbiNb2yQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "8.0.2"
+        }
+      },
+      "QuickFIXn.Core": {
+        "type": "Transitive",
+        "resolved": "1.14.1",
+        "contentHash": "KKIPiQL97MvtUbWC0+iVmSR3vcwuLCSsj2z914t1rV8YaMZtgTc39I1YrQh8mAatJZaikPdbEIKK3dkHxG+l8w==",
+        "dependencies": {
+          "Microsoft.Extensions.Logging.Abstractions": "8.0.3"
+        }
+      },
+      "QuickFIXn.FIX44": {
+        "type": "Transitive",
+        "resolved": "1.14.1",
+        "contentHash": "83Msts8cYI9KbKqtHU5QOBB1XcX7mk8m1VvXQfvEaYMg7x2/vjd2NPIsSP+Km9esMTRyuN17M8Is9bmT5g/4qA==",
+        "dependencies": {
+          "QuickFIXn.Core": "1.14.1"
+        }
+      },
+      "session-harness": {
+        "type": "Project",
+        "dependencies": {
+          "QuickFIXn.Core": "[1.14.1, 1.14.1]",
+          "QuickFIXn.FIX44": "[1.14.1, 1.14.1]"
+        }
+      }
+    }
+  }
+}

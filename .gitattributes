@@ -1,0 +1,3 @@
+* text=auto eol=lf
+vendor/FIX44.xml -text
+vendor/QUICKFIX-LICENSE -text
