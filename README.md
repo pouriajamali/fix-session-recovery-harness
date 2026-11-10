@@ -122,3 +122,5 @@ required acknowledgment and naming/non-endorsement conditions. Microsoft runtime
 and dependencies retain their own notices. No private/shared/employer/customer
 code, dictionary, contract or data is included. No deployment, market study,
 customer, revenue, security certification or independent-skill claim is made.
+
+[CI resource policy](docs/CI-POLICY.md): documentation-only changes get real lightweight document/pipeline checks; source, tag and manual runs retain native validation. Published runtime tags and release assets remain unchanged.
