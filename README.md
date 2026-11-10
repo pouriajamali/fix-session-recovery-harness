@@ -124,3 +124,9 @@ code, dictionary, contract or data is included. No deployment, market study,
 customer, revenue, security certification or independent-skill claim is made.
 
 [CI resource policy](docs/CI-POLICY.md): documentation-only changes get real lightweight document/pipeline checks; source, tag and manual runs retain native validation. Published runtime tags and release assets remain unchanged.
+
+## Source readability
+
+The current source expands compact C# layout for review. The published preview links identify its frozen runtime release. Formatting preserves complete syntax, token text and values, comments and directives; it does not introduce a runtime behavior or performance claim.
+
+To reproduce a published package, use its exact original runtime source: [v0.1.0-preview.1 source](https://github.com/pouriajamali/fix-session-recovery-harness/tree/330ae8f927395564937ed1043510d60a87b9987d) (`330ae8f927395564937ed1043510d60a87b9987d`). Later `main` layout is reviewed separately from those frozen release commits.
