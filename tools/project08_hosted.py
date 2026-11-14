@@ -130,7 +130,7 @@ def checked_run(command,**kwargs):
        ('--version','--list-runtimes','restore','build','run','publish'),'fixed SDK executable/subcommand')
   need(not any('NoWarn' in str(x) or 'NuGetAudit=false' in str(x) for x in command),'no weakened audit')
  else:
-  expected=state/'consumer/extracted'/('fix-session-recovery-harness-v0.1.0-preview.3-'+ctx['rid'])/('session-harness.exe' if os.name=='nt' else 'session-harness')
+  expected=state/'consumer/extracted'/('fix-session-recovery-harness-v0.1.0-preview.4-'+ctx['rid'])/('session-harness.exe' if os.name=='nt' else 'session-harness')
   need(exe==expected.resolve() and command[1] in
        ('--version','demo','--host','--settings','--dictionary','--order','--owned-worker'),'only own fixed consumer app')
   m=read(exe.parent/'BUILD-MANIFEST.json')
@@ -228,7 +228,7 @@ def execute(profile,ctx,state,phase,nonce):
   need(meta['commit']==ctx['commit'] and meta['sourceTree']==ctx['tree'] and meta['rid']==ctx['rid'],'producer identity')
   terminal=read(state/'package/terminal.json')
   need(terminal['exitCode']==0 and terminal['terminal'] and terminal['commit']==ctx['commit'],'successful actual producer')
-  filename='fix-session-recovery-harness-v0.1.0-preview.3-'+ctx['rid']+('.zip' if ctx['rid']=='win-x64' else '.tar.gz')
+  filename='fix-session-recovery-harness-v0.1.0-preview.4-'+ctx['rid']+('.zip' if ctx['rid']=='win-x64' else '.tar.gz')
   archive=state/'package/delivery'/filename
   need(Path(meta['archive']).resolve()==archive.resolve() and archive.stat().st_size<=48*1024*1024 and
        sha(archive)==meta['sha256'] and archive.stat().st_size==meta['bytes'],'fixed producer bytes')
@@ -261,7 +261,7 @@ def execute(profile,ctx,state,phase,nonce):
      target.chmod(0o755 if target.name in ('session-harness','createdump') else 0o644)
   need(len(names)<=512 and len(names)==len(set(names)),'consumer bounded unique entries')
   import check_package
-  sys.argv=['check_package.py','--package',str(destination/('fix-session-recovery-harness-v0.1.0-preview.3-'+ctx['rid'])),
+  sys.argv=['check_package.py','--package',str(destination/('fix-session-recovery-harness-v0.1.0-preview.4-'+ctx['rid'])),
    '--work',str(folder/'consumer'),'--commit',ctx['commit']]
   with (folder/'consumer-private-stdout.txt').open('x') as private_stdout,contextlib.redirect_stdout(private_stdout):check_package.main()
 def main():

@@ -95,7 +95,7 @@ incomplete/exit1. If output itself is unwritable, no durable diagnostic is claim
 
 ## Servicing and resources
 
-Candidate0.1.0-preview.3 pins SDK10.0.404/runtime10.0.15/net10; QuickFIX1.14.1,
+Candidate0.1.0-preview.4 pins SDK10.0.404/runtime10.0.15/net10; QuickFIX1.14.1,
 dictionary and no-trim/AOT/R2R remain fixed. RID NuGet locks and separate runtime
 pack content/notice pins are sealed before qualification; locked restores follow.
 No .NET11 support is inferred or retargeted here.

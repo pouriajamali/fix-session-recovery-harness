@@ -14,10 +14,10 @@ This workflow policy separates documentation checks from unchanged runtime build
 
 The lightweight job uses only the standard Ubuntu runner, Python's standard library, and actionlint 1.7.12 downloaded from its official release with an exact archive SHA256. It does not claim optional external ShellCheck/Pyflakes results. Current account storage usage is not inferred from one repository's artifact byte count.
 
-## Preview3 recovery candidate route
+## Preview4 observable transport route
 
 The local contract grants no CI event. Exact candidate source/tag/draft staging
-must be approved first. Maximum reservation:four events/160runner-min,226MiB
+must be approved first. Maximum reservation:six events/240runner-min,338MiB
 total new cache bytes including compressed-envelope overhead. Source CI uses log proofs only.
 No paid override, extra watcher, storage cleanup or duplicate unchanged dispatch.
 Actual current quota/headroom and hosted profile admission are gates.
@@ -108,12 +108,11 @@ After exact restore, aggregation verifies every externally committed byte and
 H1/H2/H3 before copying archive/proof into the unchanged release checks. It never
 promotes local bb406/4abce proof to this new CI source identity.
 
-The authorized technical envelope is at most4 events/160runner-min/226MiB aggregate.
+The authorized technical envelope is at most6 events/240runner-min/338MiB aggregate.
 Each RID archive is at most48MiB and its finite proof bundle at most1MiB.
 The source archive retains the existing at most1MiB cap; staging receipt/SUMS/key reserve is1MiB.
-Source CI uses zero new cache bytes. The failed preview2 tag and new preview3 tag each reserve two
-compressed entries of at most56MiB, including their envelope overhead: four
-entries <=224MiB plus2MiB envelope reserve fit226MiB. Raw data remains <=49MiB/
+Source CI uses zero new cache bytes. The failed preview2/preview3 tags retain224MiB of reservations. The new preview4
+tag reserves112MiB: six compressed entries <=336MiB plus2MiB reserve fit338MiB. Raw data remains <=49MiB/
 RID (48archive+1proof). Actual entry size is checked from authenticated metadata;
 fresh repository usage and coordinated in-flight reservations remain event gates.
 The configured cache limit remains UNKNOWN and operational availability is not
@@ -150,7 +149,7 @@ compares proof identities to the received archive and manifest bytes. Private
 nonce-salted commitments are labelled separately and are not publicly inspectable
 SDK input or independent execution proof. No additional SDK call is made.
 
-## Preview3 exact-ref recovery
+## Historical preview3 exact-ref recovery
 
 Preview2 run43624690595 attempt1 finished both native jobs (74passed/0failed/
 0skipped,13own consumer checks,7offline regressions and six finite proof files
@@ -160,7 +159,7 @@ This is an unsupported representation in our reader; it does not establish a
 native failure or a provider defect. No preview2 draft/signature/public release
 was produced by that run. Old tag/source/cache/log/evidence bytes remain intact.
 
-For preview3, expectedRef must have exact type str and equal
+For that preview3 recovery, expectedRef must have exact type str and equal
 refs/tags/v0.1.0-preview.3. A cache row ref must have exact type str and equal only
 refs/tags/v0.1.0-preview.3 or refs/heads/refs/tags/v0.1.0-preview.3.
 There is no normalization, prefix stripping, branch equivalence or scope bypass.
@@ -168,10 +167,47 @@ The original authenticated private metadata is retained without rewriting.
 Every outside-cache key/source/run/attempt1/RID/digest, unique entry, version/
 size cap, affirmative save, exact hit triplet and archive/proof check remains.
 
-Two events and80 runner-minutes remain charged/reserved. New source event3
+At the prior preview3 recovery, two events and80 runner-minutes were retained. Source event3
 and new tag event4 each reserve40minutes; no refund/reset, manual contingency
-or automatic fifth event is granted. Cache226MiB remains failedTag112 plus
+or automatic fifth event is granted. That prior226MiB contract retained failedTag112 plus
 newTag112 plus2reserve; actual failed-tag cache usage was72866260bytes. Ordinary
 source CI still writes no artifacts/cache. PerRID900s/2CPU/2GiB/256tasks or
 processes/Linuxswap0 and SDK404/runtime15 remain fixed. Each future source/tag/
 draft/sign/public step needs its own exact gate; this contract grants no event.
+
+## Preview4 bounded observable HTTPS
+
+Preview3 source CI43631965837 succeeded and tag CI43632757157 completed both
+native jobs (74tests/13consumer/7offline each), then failed expect-carriers before
+restore/draft. The first failed hosted guard and earlier Actions-token response
+remain UNKNOWN. Later captured actual bodies and the unchanged tag3 pure-path
+replay pass do not establish that earlier cause.
+
+The fixed repository GET reader uses only the existing ephemeral Actions
+GH_TOKEN in memory. Verified HTTPS sends Authorization only to api.github.com.
+Metadata is <=131072B, job logs <=32MiB, with strict JSON, complete bounded body,
+declared Content-Length checks when present and one60s whole-operation deadline.
+No CLI/GCM/PAT/proxy/SSL fallback or implicit retry exists. Only a selected joblog
+may redirect once to productionresultssa[0-9]{1,2}.blob.core.windows.net via a
+fresh noauth/nocookie request; no second redirect, raw API/error/SAS persistence
+or URL/header/body diagnostics is allowed.
+
+Only fixed preview4 push tags invoke READ_ONLY_TRANSPORT_PREFLIGHT in the
+existing5min ci_policy job, after offline tests/policy/lint and before dependent
+native jobs. Its scoped actions:read token reads a unique same-SHA successful
+attempt1 main-source run for this workflow, one exact completed Native job and
+its original six-file proof log, then typed repository cache usage. It permits
+<=5API reads plus<=1unsigned redirect under60s. Source/PR runs skip this probe.
+This consumes transport readiness, not another SDK run or tag-native evidence.
+
+A <=1024B closed diagnostic identifies first operation/stage/reason, sourceSHA,
+run/attempt and HTTPstatus-or-null only. Input/token/request/status/redirect/body/
+deadline/JSON/run/jobs/outputs/handoff/frame/save/cachekey/ref/version/size/
+statewrite failures HOLD without raw exceptions or responses. All original
+source/run/key/ref/save/lookup/restore/archive/H1/H2/H3 guards remain.
+
+The technical envelope is6events/240runner-min/338MiB. Four events/160minutes and
+four entries/224MiB remain charged/reserved; actual retained cache usage was
+145760489B. New source5 and tag6 reserve40minutes each and the new tag112MiB.
+There is no refund/reset, automatic seventh event, manual contingency, billing
+or settings change. All native/SDK/perphase/sourceZIP limits remain unchanged.

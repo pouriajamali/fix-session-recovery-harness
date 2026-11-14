@@ -11,7 +11,7 @@ internal sealed class Problem(string code, bool failed = false) : Exception(code
 
 internal static partial class Contract
 {
-    public const string Version = "0.1.0-preview.3", DictionaryHash = "a8111ec59d33053b45be975bbb7d6d1e9f2b6f4a160d832853fa0d8c627ea434";
+    public const string Version = "0.1.0-preview.4", DictionaryHash = "a8111ec59d33053b45be975bbb7d6d1e9f2b6f4a160d832853fa0d8c627ea434";
     public static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

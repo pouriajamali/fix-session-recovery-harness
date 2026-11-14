@@ -49,9 +49,9 @@
     }
   },
   "artifactBudget": {
-    "maxEvents": 4,
-    "maxRunnerMinutes": 160,
-    "maxAggregateMiB": 226,
+    "maxEvents": 6,
+    "maxRunnerMinutes": 240,
+    "maxAggregateMiB": 338,
     "ordinaryDays": 3,
     "tagManualDays": 7,
     "maxArchiveMiBPerRid": 48,
@@ -60,9 +60,9 @@
     "maxStageReserveMiB": 1,
     "eventEnvelopeMiB": {
       "source": 0,
-      "failedTag": 112,
+      "retainedTags": 224,
       "recoveryTag": 112,
-      "total": 224,
+      "total": 336,
       "headroom": 2
     }
   },
@@ -77,26 +77,42 @@
     "completeJobLogBytes": 33554432,
     "rawCarrierMiBPerRid": 49,
     "compressedEntryMiBPerRid": 56,
-    "maxCarrierEntries": 4,
-    "compressedEntriesMiBTotal": 224,
+    "maxCarrierEntries": 6,
+    "compressedEntriesMiBTotal": 336,
     "envelopeReserveMiB": 2,
-    "maxNewCacheMiBTotal": 226,
+    "maxNewCacheMiBTotal": 338,
     "cacheLifecycle": "Platform default; no expiration, settings or cleanup change",
     "sourceZipBytes": 1048576
   },
   "recoveryLedger": {
-    "chargedEvents": 2,
-    "priorRunnerReservationsMinutes": 80,
-    "newSourceEventNumber": 3,
+    "chargedEvents": 4,
+    "priorRunnerReservationsMinutes": 160,
+    "retainedCacheEntries": 4,
+    "retainedCacheReservationMiB": 224,
+    "actualRetainedCacheBytes": 145760489,
+    "newSourceEventNumber": 5,
     "newSourceReservationMinutes": 40,
-    "newTagEventNumber": 4,
+    "newTagEventNumber": 6,
     "newTagReservationMinutes": 40,
-    "failedTagReservationMiB": 112,
-    "actualFailedTagCacheBytes": 72866260,
     "newTagReservationMiB": 112,
     "reserveMiB": 2,
     "noRefundOrReset": true,
     "manualContingencyGranted": false,
-    "additionalEventAutomatic": false
+    "additionalEventAutomatic": false,
+    "priorLedger": {
+      "chargedEvents": 2,
+      "priorRunnerReservationsMinutes": 80,
+      "newSourceEventNumber": 3,
+      "newSourceReservationMinutes": 40,
+      "newTagEventNumber": 4,
+      "newTagReservationMinutes": 40,
+      "failedTagReservationMiB": 112,
+      "actualFailedTagCacheBytes": 72866260,
+      "newTagReservationMiB": 112,
+      "reserveMiB": 2,
+      "noRefundOrReset": true,
+      "manualContingencyGranted": false,
+      "additionalEventAutomatic": false
+    }
   }
 }
