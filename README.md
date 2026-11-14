@@ -1,6 +1,6 @@
 # FIX Session Recovery Harness
 
-Three guided **synthetic loopback** cases around pinned QuickFIX/n1.14.1. See what
+Four guided **synthetic loopback** cases around pinned QuickFIX/n1.14.1. See what
 happens to a sequence gap, a duplicate and a stored resend, then inspect the raw
 wire and worker receipts. This wraps an existing engine; it is not a new FIX engine.
 
@@ -9,13 +9,17 @@ wire and worker receipts. This wraps an existing engine; it is not a new FIX eng
 | Hold an out-of-sequence News until its gap is filled | ResendRequest covering2, callback order GAP2 then GAP3 |
 | Repeating an accepted News must not trigger another callback in this case | Valid PossDup/OrigSendingTime repeat plus a subsequent session barrier; callbacks remain exactly those two |
 | A resend preserves the original application body and sequence | News2/3 replay, PossDupFlag=Y and original SendingTime retained as OrigSendingTime |
+| An admin GapFill skips a missing slot without inventing News | GapFill2 to3, callbacks GAPFILL3 then GAPFILL5, persisted nextTarget8 |
 | A controlled process restart must use released, persisted state | First child exits and drains, parent acquires exclusive store handles, second child continues sequence and replays prior News |
 
-These are observations of three fixed cases, not a general exactly-once, crash
+These are observations of four fixed cases, not a general exactly-once, crash
 durability, counterparty certification or production guarantee. The
 [decision/test map](docs/CASE-STUDY.md) identifies the tests and limitations.
 
-Preview channel: **v0.1.0-preview.1**. [Downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
+Source candidate: **0.1.0-preview.2**, SDK10.0.404/runtime10.0.15, report-v2.
+Native qualification and signed publication of this candidate are pending; no release claim follows from source preparation.
+
+Frozen published preview: **v0.1.0-preview.1** (three cases/runtime14). [Downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
 and [checksum/signature verification](PROVENANCE.md). A missing release/signature
 is incomplete publication; do not bypass verification.
 
@@ -47,7 +51,7 @@ received frames. Fragmentation does not create an unbounded event list.
 
 | Exit | Meaning |
 | --- | --- |
-| 0 | All three complete expected observations passed |
+| 0 | All four complete expected observations passed (candidate) |
 | 2 | A completed bounded expectation failed; no successful demo claim |
 | 1 | Incomplete/unsupported/I/O, deadline, process, protocol or report-write failure |
 
@@ -87,13 +91,27 @@ JSON or a nonzero process exit must not be treated as success.
 
 ## Build and test
 
-Source requires SDK10.0.403:
+Candidate source pins SDK10.0.404 and runtime10.0.15. Local execution first requires the
+manager's exact input/profile admission. The fixed project08 launcher enforces the
+approved phase, owned E outputs, canonical lane and actual Job/cgroup limits; no
+uncapped fallback or direct SDK probe/bootstrap is supported. Windows256processes
+and Linux256tasks are different limits, not an equal thread-cap claim.
+
+After admission, use the fixed launcher phases; the equivalent bounded source commands are:
 
 ```sh
-dotnet restore tests/SessionHarness.Tests --locked-mode
-dotnet run --project tests/SessionHarness.Tests -c Release --no-restore -- --work artifacts/tests
-dotnet run --project src/SessionHarness -c Release -- demo "source demo output"
+# Example inside the admitted phase: linux-x64; use win-x64 on Windows.
+dotnet restore tests/SessionHarness.Tests -p:RuntimeIdentifier=linux-x64 -p:SelfContained=true --locked-mode --disable-parallel -p:NuGetAuditMode=all -p:DisableTransitiveFrameworkReferenceDownloads=true
+dotnet build tests/SessionHarness.Tests -c Release -p:RuntimeIdentifier=linux-x64 -p:SelfContained=true --no-restore -m:1 -p:BuildInParallel=false -p:UseSharedCompilation=false -nodeReuse:false -p:DisableTransitiveFrameworkReferenceDownloads=true
+dotnet run --project tests/SessionHarness.Tests -c Release -p:RuntimeIdentifier=linux-x64 -p:SelfContained=true --no-build --no-restore -- --work artifacts/tests
 ```
+
+Keep the selected RID consistent through restore, build, tests, packaging and the
+extracted consumer check. Complete one RID before starting the other; both use
+the same source `obj` directories. Release the shared local lane between phases.
+Per-RID locks are selected by the singular `RuntimeIdentifier` property; a
+portable restore does not qualify them. A restore/pin is content evidence, not
+successful compilation, fixture execution or an extracted-package result.
 
 Use fresh test/demo paths. Tests cover real loopback cases, fragmented/coalesced
 frames, raw accumulation/count/byte limits, malformed checksum/session/receipts,
@@ -130,3 +148,18 @@ customer, revenue, security certification or independent-skill claim is made.
 The current source expands compact C# layout for review. The published preview links identify its frozen runtime release. Formatting preserves complete syntax, token text and values, comments and directives; it does not introduce a runtime behavior or performance claim.
 
 To reproduce a published package, use its exact original runtime source: [v0.1.0-preview.1 source](https://github.com/pouriajamali/fix-session-recovery-harness/tree/330ae8f927395564937ed1043510d60a87b9987d) (`330ae8f927395564937ed1043510d60a87b9987d`). Later `main` layout is reviewed separately from those frozen release commits.
+
+## Candidate process diagnostics
+
+Each worker phase adds a bounded `<phase>-process.json` with schema
+`fix-session-harness-process-v1`, bound nonce/scenario/phase/session/port/PID/start
+identity, observed nullable exit code, drain and forced-cleanup state. The strict
+worker receipt remains schema1 and the aggregate report is
+`fix-session-harness-report-v2`. An unobserved exit is unknown; cleanup never
+proves cleanStop/storeClosed. Diagnostic/report-write failure makes the run
+incomplete and preserves the original cause where output remains writable.
+
+The test-only NewSeqNo4 variant must finish barriers/logout and produce a
+completed semantic failure/exit2. Timeout, bad frame or child/protocol failure is
+incomplete/exit1 and cannot pass that negative test. No negative fixture option is
+available in the consumer CLI. Source preparation alone proves none of these results.

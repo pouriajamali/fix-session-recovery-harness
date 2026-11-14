@@ -125,3 +125,30 @@ Do not normalize/edit the downloaded checksum file before verification. A valid
 signature over different bytes or a matching hash for another filename does not
 verify the chosen archive. Preserve failures and obtain a trusted copy rather
 than skipping a failed signature or fingerprint check.
+
+## Preview2 draft/operator boundary
+
+The preview1 example above remains historical and immutable. Preview2 uses a draft
+until all signature and exact-candidate gates succeed. The manager thread
+01a1a0df-6c77-7bb0-b900-c3b3501198f3 is the sole future signing/draft/publish operator.
+
+The workflow aggregates only already-executed Windows/Linux archives plus exact
+source, creates canonical three-line SHA256SUMS.txt and attaches the unchanged
+public key to a draft. tools/release_candidate.py requires an identity-bound
+manager authorization from the manager-owned wave3-state directory and exact
+clean candidate source. It downloads actual draft assets by ID, compares CI/native
+identities, signs SUMS using the existing agent through the PUBLIC key reference,
+verifies the known fingerprint/principal/file namespace, uploads only the missing
+signature without clobber, and downloads/verifies all six actual draft assets.
+
+A separate coordinator-approved exact publication receipt must bind the draft
+ID, tag object/commit/tree, CI run/native proofs and all six asset IDs/sizes/hashes.
+Immediate prepublish identity checks precede changing draft=false. Final stable
+public downloads must match the approved draft and signature; live repository/
+About/website/release links require manager readback. Drafts are mutable by other
+authorized actors; this sequence is not an atomic-publication guarantee.
+
+No new key/secret, private-key read/copy, agent configuration or unsigned public
+release followed by a patch is permitted. Missing agent/auth/quota/admission is
+HOLD and never a reason to weaken verification. Source-only preparation or a
+draft is not completed publication. Application binaries remain OS-unsigned.

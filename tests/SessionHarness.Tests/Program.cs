@@ -371,14 +371,70 @@ internal static class Program
                     Environment.SetEnvironmentVariable("HARNESS_TEST_PROBE", null);
                     listener.Stop();
                 }
+                using var diagnostic = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(p, "single-process.json")));
+                var d = diagnostic.RootElement;
+                Require(!d.GetProperty("cleanStopVerified").GetBoolean() && !d.GetProperty("storeClosedVerified").GetBoolean());
+                if (probe is "empty" or "invalid" or "exit")
+                    Require(d.GetProperty("exitObserved").GetBoolean() && d.GetProperty("exitCode").GetInt32() == (probe == "exit" ? 17 : 0));
+                if (probe == "hang")
+                    Require(d.GetProperty("deadlineExpired").GetBoolean() && d.GetProperty("cleanupAttempted").GetBoolean());
             });
-        await Case("all-three-real-loopback-scenarios-and-raw-hashes", async () =>
+        await Case("strict-process-diagnostic-bindings-and-nullable-exit", () =>
+        {
+            var value = new ProcessDiagnostic("fix-session-harness-process-v1", Nonce, "gap", "single",
+                Contract.Session(Nonce), 12345, 1234, DateTime.UtcNow.ToString("O"),
+                true, false, true, 0, true, 120, 0, false, false,
+                false, false, true, true, "CONTROLLED_PROCESS_STOP", false);
+            byte[] validProcess = JsonSerializer.SerializeToUtf8Bytes(value, Contract.Json);
+            Require(OwnedChild.ValidateDiagnostic(validProcess, Nonce, "gap", "single", 12345, 1234).ExitCode == 0);
+            foreach (var (field, replacement) in new (string, JsonNode?)[]
+            {
+                ("schema", "other"), ("nonce", new string('f', 32)), ("scenario", "gapfill"),
+                ("phase", "second"), ("pid", 999), ("port", 9999), ("exitObserved", false),
+                ("exitCode", null), ("forcedTermination", true), ("extra", 1)
+            })
+            {
+                var node = JsonSerializer.SerializeToNode(value, Contract.Json)!.AsObject();
+                node[field] = replacement?.DeepClone();
+                Reject(() => OwnedChild.ValidateDiagnostic(
+                    Encoding.UTF8.GetBytes(node.ToJsonString()), Nonce, "gap", "single", 12345, 1234),
+                    "PROCESS_DIAGNOSTIC_PROTOCOL");
+            }
+            return Task.CompletedTask;
+        });
+        await Case("process-sidecar-collision-preserves-original-cause", async () =>
+        {
+            string p = Fresh("sidecar collision");
+            Safe.Fresh(p, Nonce);
+            string sentinel = Path.Combine(p, "single-process.json");
+            File.WriteAllText(sentinel, "sentinel");
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start(1);
+            Environment.SetEnvironmentVariable("HARNESS_TEST_PROBE", "empty");
+            try
+            {
+                using var child = new OwnedChild(p, Nonce, "gap", "single", ((IPEndPoint)listener.LocalEndpoint).Port);
+                using var cancel = new CancellationTokenSource(5000);
+                try { await child.Stop(cancel.Token); throw new InvalidOperationException("Empty worker accepted"); }
+                catch (Problem error) { Require(error.Code == "WORKER_PROTOCOL"); }
+                child.Dispose();
+                Require(child.DiagnosticWriteFailed && child.OriginalFailureReason == "WORKER_PROTOCOL");
+                Require(File.ReadAllText(sentinel) == "sentinel");
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("HARNESS_TEST_PROBE", null);
+                listener.Stop();
+            }
+        });
+        await Case("all-four-real-loopback-scenarios-and-raw-hashes", async () =>
         {
             string p = Fresh("actual demo");
             Require(await App.Main(["demo", p]) == 0, "Demo did not pass");
             using var doc = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(p, "summary.json")));
             var root = doc.RootElement;
-            Require(root.GetProperty("complete").GetBoolean() && root.GetProperty("scenarios").GetArrayLength() == 3);
+            Require(root.GetProperty("schema").GetString() == "fix-session-harness-report-v2");
+            Require(root.GetProperty("complete").GetBoolean() && root.GetProperty("scenarios").GetArrayLength() == 4);
             foreach (var s in root.GetProperty("scenarios").EnumerateArray())
             {
                 string name = s.GetProperty("scenario").GetString()!;
@@ -387,6 +443,25 @@ internal static class Program
                     Require(Contract.Hash(Path.Combine(p, name, hash.Name)) == hash.Value.GetString());
                 if (name == "gap")
                     Require(s.GetProperty("delivered").EnumerateArray().Select(x => x.GetString()).SequenceEqual(new[] { "GAP2", "GAP3" }));
+                if (name == "gapfill")
+                {
+                    Require(s.GetProperty("delivered").EnumerateArray().Select(x => x.GetString())
+                        .SequenceEqual(new[] { "GAPFILL3", "GAPFILL5" }));
+                    var receipt = JsonSerializer.Deserialize<WorkerReceipt>(
+                        File.ReadAllText(Path.Combine(p, name, "single-stdout.json")), Contract.Json)!;
+                    Require(receipt.NextTarget == 8 && receipt.GapRequestDeliveryCount == 0);
+                }
+                using (var workers = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(p, name, "workers.json"))))
+                    foreach (var worker in workers.RootElement.EnumerateArray())
+                    {
+                        string phase = worker.GetProperty("phase").GetString()!;
+                        var process = OwnedChild.ValidateDiagnostic(
+                            File.ReadAllBytes(Path.Combine(p, name, phase + "-process.json")),
+                            root.GetProperty("runNonce").GetString()!, name, phase,
+                            worker.GetProperty("port").GetInt32(), worker.GetProperty("pid").GetInt32());
+                        Require(process.CleanStopVerified && process.StoreClosedVerified &&
+                            process.ExitObserved && process.ExitCode == 0 && !process.CleanupAttempted);
+                    }
                 if (name == "restart")
                 {
                     Require(s.GetProperty("connections").GetInt32() == 2);
@@ -394,6 +469,26 @@ internal static class Program
                     Require(workers.RootElement.GetArrayLength() == 2 && workers.RootElement.EnumerateArray().All(w => w.GetProperty("cleanStop").GetBoolean() && w.GetProperty("storeClosed").GetBoolean()));
                 }
             }
+        });
+        await Case("gapfill-wrong-newseqno-is-completed-fail2", async () =>
+        {
+            string p = Fresh("wrong gapfill");
+            Scenarios.SkipQueuedGapFillNewsForTests = true;
+            try
+            {
+                Require(await App.Main(["demo", p]) == 2, "Wrong36 must be semantic fail2, not incomplete1");
+                using var report = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(p, "summary.json")));
+                Require(report.RootElement.GetProperty("complete").GetBoolean());
+                var gap = report.RootElement.GetProperty("scenarios").EnumerateArray()
+                    .Single(x => x.GetProperty("scenario").GetString() == "gapfill");
+                Require(gap.GetProperty("complete").GetBoolean() && gap.GetProperty("outcome").GetString() == "fail");
+                Require(gap.GetProperty("reason").GetString() == "GAPFILL_CALLBACK_OR_SEQUENCE_MISMATCH");
+                Require(gap.GetProperty("delivered").EnumerateArray().Select(x => x.GetString()).SequenceEqual(new[] { "GAPFILL5" }));
+                var worker = JsonSerializer.Deserialize<WorkerReceipt>(
+                    File.ReadAllText(Path.Combine(p, "gapfill", "single-stdout.json")), Contract.Json)!;
+                Require(worker.NextTarget == 8 && worker.CleanStop && worker.StoreClosed);
+            }
+            finally { Scenarios.SkipQueuedGapFillNewsForTests = false; }
         });
         await Case("report-collision-overrides-pass", async () =>
         {

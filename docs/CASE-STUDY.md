@@ -23,3 +23,16 @@ actual already-executed runtime archives, public downloads, member/hash and SSH
 checksum checks. Original wrapper MIT and upstream QuickFIX license are separate;
 repository signatures are not OS signing, safety or exclusive authorship proof.
 No performance measurement, customer, demand, revenue or financial claim is made.
+
+## Preview2 source candidate additions
+
+Admin GapFill release is distinct from replaying a missing News: no News2 is
+fabricated, queued News3 precedes later News5, and persisted target sequence ends8.
+The fixed wrong36=4 test rejects missing News3 only after completed protocol/stop;
+it must not substitute a timeout for semantic evidence.
+
+Versioned process diagnostics make exit0-with-invalid/empty stdout and forced
+cleanup explicit. The original cause survives a sidecar collision. SDK404/runtime15
+and both extracted native archives require fresh consumer qualification. These
+entries describe intended assertions; until the candidate proof exists they are
+source coverage, not new passing results or crash/counterparty certification.

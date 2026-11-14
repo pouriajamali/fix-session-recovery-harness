@@ -44,14 +44,15 @@ internal sealed class LabApplication(string role) : IApplication
     {
         lock (Received)
         {
-            if (m.Header.GetString(Tags.MsgType) != "B" || role != "gap" || Received.Count >= 8)
+            if (m.Header.GetString(Tags.MsgType) != "B" || role is not ("gap" or "gapfill") || Received.Count >= 8)
             {
                 Fault = "APPLICATION_MESSAGE_UNEXPECTED";
                 throw new UnsupportedMessageType();
             }
 
             string headline = m.GetString(Tags.Headline);
-            if (headline is not ("GAP2" or "GAP3"))
+            if (!(role == "gap" && headline is ("GAP2" or "GAP3") ||
+                  role == "gapfill" && headline is ("GAPFILL3" or "GAPFILL5")))
             {
                 Fault = "APPLICATION_ID_UNEXPECTED";
                 throw new UnsupportedMessageType();
@@ -71,7 +72,7 @@ internal static class EngineWorker
     {
         Contract.Nonce(nonce);
         Safe.Owned(folder, nonce);
-        if (port is < 1 or > 65535 || scenario is not ("gap" or "resend" or "restart") || !(phase == "single" && scenario != "restart" || scenario == "restart" && phase is "first" or "second"))
+        if (port is < 1 or > 65535 || scenario is not ("gap" or "resend" or "restart" or "gapfill") || !(phase == "single" && scenario != "restart" || scenario == "restart" && phase is "first" or "second"))
             throw new Problem("WORKER_ARGUMENT_INVALID");
         string role = scenario == "restart" ? phase : scenario;
         string store = Path.Combine(folder, "store");

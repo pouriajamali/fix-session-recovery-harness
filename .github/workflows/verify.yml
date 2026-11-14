@@ -52,9 +52,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # Hosted input/profile binding is supplied only after the exact source/CI gate.
+      # Local E admission cannot qualify a fresh hosted runner.
+      - name: Require actual project08 hosted kernel admission before SDK actions
+        shell: pwsh
+        run: |
+          $receipt = Join-Path $env:RUNNER_TEMP 'project08-hosted-admission.json'
+          if (!(Test-Path -LiteralPath $receipt)) { throw 'HOLD: exact hosted project08 input/profile admission is not bound' }
+          $r = Get-Content -Raw -LiteralPath $receipt | ConvertFrom-Json
+          if ($r.project -ne '08' -or $r.status -ne 'ADMITTED' -or $r.candidate -ne '${{ github.sha }}') { throw 'Hosted admission identity mismatch' }
+          throw 'HOLD: hosted membership adapter must be bound at exact source/CI gate; no uncapped SDK fallback'
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.403'
+          dotnet-version: '10.0.404'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -115,13 +125,36 @@ jobs:
           pattern: tested-*
           merge-multiple: true
           path: artifacts/release
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: proof-*
+          path: artifacts/native-proofs
       - name: Verify already-executed archives and exact source
         env:
           SOURCE_SHA: ${{ github.sha }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: python tools/check_release.py --directory artifacts/release --commit "$SOURCE_SHA" --tag "$RELEASE_TAG"
-      - name: Publish tested preview without rebuilding
+        run: python tools/check_release.py --directory artifacts/release --commit "$SOURCE_SHA" --tag "$RELEASE_TAG" --proof-root artifacts/native-proofs --run-id '${{ github.run_id }}' --stage-receipt artifacts/draft-stage-input.json
+      - name: Stage tested draft without publishing
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" artifacts/release/* --verify-tag --prerelease --title "$RELEASE_TAG — FIX Session Recovery Harness" --notes-file docs/RELEASE-v0.1.0-preview.1.md
+        run: |
+          cp SIGNING-PUBLIC-KEY.pub artifacts/release/SIGNING-PUBLIC-KEY.pub
+          gh release create "$RELEASE_TAG" \
+            "artifacts/release/fix-session-recovery-harness-$RELEASE_TAG-win-x64.zip" \
+            "artifacts/release/fix-session-recovery-harness-$RELEASE_TAG-linux-x64.tar.gz" \
+            "artifacts/release/fix-session-recovery-harness-$RELEASE_TAG-source.zip" \
+            artifacts/release/SHA256SUMS.txt artifacts/release/SIGNING-PUBLIC-KEY.pub \
+            --verify-tag --draft --prerelease --latest=false \
+            --title "$RELEASE_TAG — FIX Session Recovery Harness" \
+            --notes-file docs/RELEASE-v0.1.0-preview.2.md
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > artifacts/actual-draft.json
+          python tools/check_release.py --directory artifacts/release --commit "$GITHUB_SHA" --tag "$RELEASE_TAG" \
+            --stage-input artifacts/draft-stage-input.json --bind-draft artifacts/actual-draft.json \
+            --stage-receipt artifacts/DRAFT-STAGE.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project08-draft-stage
+          path: artifacts/DRAFT-STAGE.json
+          retention-days: 7
+          if-no-files-found: error

@@ -1,0 +1,72 @@
+{
+  "schema": "project08-profile-v1",
+  "project": "08",
+  "repository": "fix-session-recovery-harness",
+  "approvedM0Sha256": "667704825a22bff125c533c062541e0d115534a9c5103df7cc3d33a529637a09",
+  "approvalReceiptSha256": "45c67dcd400c6444b8b353b71e922e2e69ab7afa9b5ee1297ae73ec54e21081f",
+  "sdk": "10.0.404",
+  "runtime": "10.0.15",
+  "tfm": "net10.0",
+  "memoryBytes": 2147483648,
+  "cpuCount": 2,
+  "windowsProcessLimit": 256,
+  "linuxTaskLimit": 256,
+  "linuxSwapBytes": 0,
+  "nativeTotalSeconds": 900,
+  "phases": {
+    "lock": 180,
+    "restore": 90,
+    "build": 90,
+    "tests": 165,
+    "package": 210,
+    "consumer": 120,
+    "probe": 10,
+    "recovery-lock": 90
+  },
+  "admissionWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave3-state/project08-local-admission-20261114.json",
+  "canonicalLeaseWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave2-state/LOCAL-FIXTURE-LEASE.json",
+  "evidenceRootWindows": "E:/Codex WorkSpace/Git Projects/fix-session-recovery-harness/chat-fix-recovery-roadmap/outputs/wave3-m1-20261114",
+  "windowsTaskSemantics": "256 processes is not a 256-thread limit; observed thread counts are diagnostics only",
+  "status": "SOURCE_PREPARED_NOT_ADMITTED",
+  "sharedInputBindings": {
+    "path": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave3-state/SHARED-INPUT-BINDINGS-20261114.json",
+    "sha256": "e3edef62643e25569e70969e1aebd763c9bdb42b6f8556189b96b91b8eb6c4ed"
+  },
+  "canonicalProtocolSha256": "9ac8cab8ff260c1fc52976056ad455c1fdafcebd9be2ac2258f0e611faac8ed2",
+  "approvedPacketWindows": "E:/Codex WorkSpace/Git Projects/fix-session-recovery-harness/chat-fix-recovery-roadmap/outputs/wave3-m0-20261114/M0-PACKET.json",
+  "recoveryLock": {
+    "rid": "win-x64",
+    "maxAttempts": 1,
+    "totalAttemptSeconds": 90,
+    "reservedNativeDebitSeconds": 90,
+    "targetAndDrainReserveSeconds": 12,
+    "outerTerminalAndBookkeepingReserveSeconds": 6,
+    "bookkeepingReserveSeconds": 3,
+    "amendmentSha256": "54ff49ba9298325ba4cbeef1971d3f7a1c7aab8475eedf676869b21c777d8763",
+    "fixedStateRelative": "native-qualification/win-x64",
+    "markerName": "recovery-lock-marker.json",
+    "resultName": "recovery-lock-result.json",
+    "nativeBudgetName": "native-budget.json",
+    "originalFailure": {
+      "id": "WIN_LOCK_01",
+      "relativeTerminal": "lock/launcher-terminal.json",
+      "sha256": "63b6c139994d1bb403d8d4f569b46058c879bd5906573bab4b5deee75c475f4a",
+      "separateSpentSeconds": 180
+    },
+    "transitionReceiptWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave3-state/project08-preseal-budget-transition-20261114.json",
+    "accounting": "Reserve90 before target. STARTED is used permanently. Reserve/debit carries into final signed candidate only via manager-bound transition; source/folder/nonce changes cannot reset fixed RID state."
+  },
+  "routingReconciliation": {
+    "amendmentWindows": "C:/Users/Office/.codex/visualizations/2026/11/03/01a1a0c7-ea18-7642-89d9-12d79bed9f19/project08-lock-routing-reconciliation-amendment-20261114.json",
+    "amendmentSha256": "a62a0512e1d6d1c3438d9d55b264867cbae82729f41dabdcbd055cad3ec970e2",
+    "receiptRelative": "routing-reconciliation-01/RECONCILIATION.json",
+    "receiptSha256": "7e922c423a063e50b1aa678a028a8f8e13bd6d108d63c783b74a23f1443a5c63",
+    "transitionStatus": "CLOSED_FAILED_RECOVERY_RECONCILED_OUTPUTS_ACCOUNTED_SIGNED_CANDIDATE",
+    "historicalNonce": "13f94171d9627c0994a1963ffd6517ee",
+    "rootLockSha256": {
+      "src/SessionHarness/packages.lock.json": "43320ad83f8a56fa6d50a2a54e23132115f05dcad6d93e9e50b6af8696eb4ce2",
+      "tests/SessionHarness.Tests/packages.lock.json": "2d49a858c78ebec44dec9c9185e5e4d38faec8fc0c547392f6353711ade65a34"
+    },
+    "route": "Fixed singular RuntimeIdentifier and SelfContained=true throughout RID lock/restore/build/run/publish. No alternate lock lookup or third Windows lock."
+  }
+}

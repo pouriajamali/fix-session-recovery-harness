@@ -8,6 +8,9 @@ using QuickFix.Fields;
 namespace SessionHarness;
 internal static class Scenarios
 {
+    // Internal, fixed negative fixture. Never exposed by the consumer CLI.
+    internal static bool SkipQueuedGapFillNewsForTests;
+
     private static void Require(bool condition, string code)
     {
         if (!condition)
@@ -59,12 +62,26 @@ internal static class Scenarios
         Require(original.Select(f => new { f.Key, Value = f.Value.ToString() }).SequenceEqual(replay.Select(f => new { f.Key, Value = f.Value.ToString() })), "REPLAY_BODY_MISMATCH");
     }
 
+    private static ulong ObservedNextSender(List<WireEvent> events)
+    {
+        // Events here have already passed upstream framing/dictionary/session validation.
+        var numbers = events.Where(e => e.Direction == "engine-to-peer-frame")
+            .Select(e => ulong.Parse(e.Raw.Split('\x01').Single(field => field.StartsWith("34=", StringComparison.Ordinal))[3..],
+                System.Globalization.CultureInfo.InvariantCulture)).ToArray();
+        Require(numbers.Length > 0 && numbers[0] == 1 &&
+            numbers.Skip(1).Select((number, i) => number == numbers[i] + 1).All(x => x),
+            "ENGINE_SENDER_SEQUENCE_MISMATCH");
+        return numbers[^1] + 1;
+    }
+
     public static async Task<ScenarioReceipt> Run(string root, string scenario, string nonce)
     {
         string folder = Path.Combine(root, scenario);
         Safe.Fresh(folder, nonce);
         List<WireEvent> events = [];
         List<WorkerReceipt> workers = [];
+        List<OwnedChild> owned = [];
+        string? originalReason = null;
         int frames = 0, connections = 0;
         bool complete = false;
         string outcome = "incomplete", reason = "NOT_COMPLETED";
@@ -80,6 +97,9 @@ internal static class Scenarios
             using (var child = new OwnedChild(folder, nonce, scenario, phase, port))
             using (var wire = new Wire(await listener.AcceptTcpClientAsync(deadline.Token), nonce, events, budget, trace))
             {
+                owned.Add(child);
+                try
+                {
                 connections++;
                 await Logon(wire, nonce, 1, 1, deadline.Token);
                 if (scenario == "gap")
@@ -94,6 +114,24 @@ internal static class Scenarios
                     await wire.Send(News(nonce, 2, "GAP2", orig), deadline.Token);
                     await Barrier(wire, nonce, 5, "AFTER_DUPLICATE", deadline.Token);
                     await Logout(wire, nonce, 6, deadline.Token);
+                }
+                else if (scenario == "gapfill")
+                {
+                    await wire.Send(News(nonce, 3, "GAPFILL3"), deadline.Token);
+                    var request = await wire.Need("2", deadline.Token);
+                    ulong begin = request.GetULong(Tags.BeginSeqNo);
+                    ulong end = request.GetULong(Tags.EndSeqNo);
+                    Require(begin == 2 && (end == 0 || end >= 2), "RESEND_RANGE_MISMATCH");
+                    var fill = Wire.Message("4", 2, nonce);
+                    fill.SetField(new GapFillFlag(true));
+                    fill.SetField(new NewSeqNo((ulong)(SkipQueuedGapFillNewsForTests ? 4 : 3)));
+                    fill.Header.SetField(new PossDupFlag(true));
+                    fill.Header.SetField(new OrigSendingTime(DateTime.UtcNow.AddSeconds(-1)));
+                    await wire.Send(fill, deadline.Token);
+                    await Barrier(wire, nonce, 4, "AFTER_ADMIN_GAPFILL", deadline.Token);
+                    await wire.Send(News(nonce, 5, "GAPFILL5"), deadline.Token);
+                    await Barrier(wire, nonce, 6, "AFTER_GAPFILL_NEWS", deadline.Token);
+                    await Logout(wire, nonce, 7, deadline.Token);
                 }
                 else if (scenario == "resend")
                 {
@@ -120,10 +158,21 @@ internal static class Scenarios
 
                 frames += wire.FrameCount;
                 workers.Add(await child.Stop(deadline.Token));
+                }
+                catch (Exception failure)
+                {
+                    child.NoteFailure(failure);
+                    throw;
+                }
             }
 
             if (scenario == "gap")
                 Require(workers[0].Delivered.SequenceEqual(new[] { "GAP2", "GAP3" }) && workers[0].GapRequestDeliveryCount == 0, "CALLBACK_ORDER_OR_DUPLICATE_MISMATCH");
+            else if (scenario == "gapfill")
+                Require(workers[0].Delivered.SequenceEqual(new[] { "GAPFILL3", "GAPFILL5" }) &&
+                    workers[0].GapRequestDeliveryCount == 0 && workers[0].NextTarget == 8 &&
+                    workers[0].NextSender == ObservedNextSender(events),
+                    "GAPFILL_CALLBACK_OR_SEQUENCE_MISMATCH");
             else
                 Require(workers[0].Delivered.Length == 0, "UNEXPECTED_APPLICATION_CALLBACK");
             if (scenario == "restart")
@@ -132,7 +181,10 @@ internal static class Scenarios
                 var prior = workers[0];
                 Require(prior.NextSender < 100 && prior.NextTarget < 100, "SEQUENCE_LIMIT");
                 using var child = new OwnedChild(folder, nonce, scenario, "second", port);
+                owned.Add(child);
                 using var wire = new Wire(await listener.AcceptTcpClientAsync(deadline.Token), nonce, events, budget, trace);
+                try
+                {
                 connections++;
                 await Logon(wire, nonce, (int)prior.NextTarget, (int)prior.NextSender, deadline.Token);
                 var request = Wire.Message("2", (int)prior.NextTarget + 1, nonce);
@@ -145,6 +197,12 @@ internal static class Scenarios
                 frames += wire.FrameCount;
                 workers.Add(await child.Stop(deadline.Token));
                 Require(workers[1].Delivered.Length == 0, "UNEXPECTED_APPLICATION_CALLBACK");
+                }
+                catch (Exception failure)
+                {
+                    child.NoteFailure(failure);
+                    throw;
+                }
             }
 
             complete = true;
@@ -157,6 +215,14 @@ internal static class Scenarios
             outcome = p.Failed ? "fail" : "incomplete";
             reason = p.Code;
         }
+        catch (OperationCanceledException)
+        {
+            reason = "NETWORK_OR_SCENARIO_TIMEOUT";
+        }
+        catch (InvalidMessage)
+        {
+            reason = "FRAME_VALIDATION_FAILED";
+        }
         catch (Exception e)when (e is not OutOfMemoryException)
         {
             complete = false;
@@ -168,6 +234,13 @@ internal static class Scenarios
             listener.Stop();
         }
 
+        if (owned.Any(child => child.DiagnosticWriteFailed))
+        {
+            originalReason = owned.First(child => child.DiagnosticWriteFailed).OriginalFailureReason;
+            reason = "PROCESS_DIAGNOSTIC_WRITE_FAILED";
+            complete = false;
+            outcome = "incomplete";
+        }
         Safe.Owned(folder, nonce);
         Dictionary<string, string> hashes = [];
         void Write(string name, byte[] bytes)
@@ -186,6 +259,9 @@ internal static class Scenarios
         Write("events.json", Encoding.UTF8.GetBytes(JsonSerializer.Serialize(events.Select(e => new { e.Direction, Wire = e.Raw.Replace('\x01', '|') }), Contract.Json) + "\n"));
         foreach (string name in new[]
         {
+            "single-process.json",
+            "first-process.json",
+            "second-process.json",
             "single-stdout.json",
             "single-stderr.bin",
             "first-stdout.json",
@@ -203,6 +279,6 @@ internal static class Scenarios
             }
 
         frames = events.Count; // Successful sent / validated received frames, including on a partial run.
-        return new(scenario, outcome, complete, reason, connections, frames, workers.SelectMany(w => w.Delivered).ToArray(), $"Verified clean process stops: {workers.Count}/{(scenario == "restart" ? 2 : 1)}; failure teardown is not counted; no crash durability proof", hashes);
+        return new(scenario, outcome, complete, reason, connections, frames, workers.SelectMany(w => w.Delivered).ToArray(), $"Verified clean process stops: {workers.Count}/{(scenario == "restart" ? 2 : 1)}; failure teardown is not counted; no crash durability proof", hashes, originalReason);
     }
 }

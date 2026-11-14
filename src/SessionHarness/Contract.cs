@@ -11,7 +11,7 @@ internal sealed class Problem(string code, bool failed = false) : Exception(code
 
 internal static partial class Contract
 {
-    public const string Version = "0.1.0-preview.1", DictionaryHash = "a8111ec59d33053b45be975bbb7d6d1e9f2b6f4a160d832853fa0d8c627ea434";
+    public const string Version = "0.1.0-preview.2", DictionaryHash = "a8111ec59d33053b45be975bbb7d6d1e9f2b6f4a160d832853fa0d8c627ea434";
     public static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -112,4 +112,13 @@ internal static class Safe
 }
 
 internal sealed record WorkerReceipt(int Schema, bool Complete, string Nonce, string Scenario, string Phase, string Session, int Port, int Pid, string Outcome, string Reason, bool CleanStop, bool StoreClosed, ulong NextSender, ulong NextTarget, string[] Delivered, int GapRequestDeliveryCount);
-internal sealed record ScenarioReceipt(string Scenario, string Outcome, bool Complete, string Reason, int Connections, int Frames, string[] Delivered, string StopBoundary, Dictionary<string, string> ArtifactHashes);
+internal sealed record ScenarioReceipt(string Scenario, string Outcome, bool Complete, string Reason, int Connections, int Frames, string[] Delivered, string StopBoundary, Dictionary<string, string> ArtifactHashes, string? OriginalReason = null);
+
+internal sealed record ProcessDiagnostic(
+    string Schema, string Nonce, string Scenario, string Phase, string Session,
+    int Port, int? Pid, string? ProcessStartIdentity, bool StopRequested,
+    bool DeadlineExpired, bool ExitObserved, int? ExitCode, bool DrainComplete,
+    long StdoutBytesObserved, long StderrBytesObserved, bool StdoutOverflow,
+    bool StderrOverflow, bool CleanupAttempted, bool ForcedTermination,
+    bool CleanStopVerified, bool StoreClosedVerified, string Reason,
+    bool EvidenceWriteFailure);

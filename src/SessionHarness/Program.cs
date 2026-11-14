@@ -35,7 +35,8 @@ internal static class Program
             {
                 "gap",
                 "resend",
-                "restart"
+                "restart",
+                "gapfill"
             }
 
             )
@@ -47,7 +48,7 @@ internal static class Program
             Safe.Owned(root, run);
             var report = new
             {
-                schema = "fix-session-harness-report-v1",
+                schema = "fix-session-harness-report-v2",
                 version = Contract.Version,
                 toolBuild = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(Program).Assembly)?.InformationalVersion ?? "UNAVAILABLE",
                 complete,
@@ -58,7 +59,7 @@ internal static class Program
                 upstreamSource = "44c111acdb253335fd3c035589795468ff60c400",
                 dictionarySha256 = Contract.DictionaryHash,
                 endpoint = "127.0.0.1 only; ephemeral listener owned by parent",
-                scope = "Three synthetic News/admin cases only; no orders/broker/production/crash-durability/performance/exactly-once guarantee",
+                scope = "Four synthetic News/admin cases only; no orders/broker/production/crash-durability/performance/exactly-once guarantee",
                 scenarios = results
             };
             using (var f = new FileStream(Path.Combine(root, "summary.txt.pending"), FileMode.CreateNew, FileAccess.Write))

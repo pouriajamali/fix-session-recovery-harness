@@ -26,3 +26,9 @@ Microsoft.Extensions.DependencyInjection.Abstractions8.0.2 and the bundled .NET
 runtime retain their MIT and available third-party notices. Exact resolved graph,
 versions, package content hashes and copied license files appear in DEPENDENCIES.json.
 No private, employer, shared proprietary, customer, market or account material is used.
+
+Candidate servicing note: preview2 targets SDK10.0.404/runtime10.0.15 while keeping
+QuickFIXn1.14.1 and the public dictionary unchanged. Each new native archive must
+include the actual runtime15 LICENSE/THIRD-PARTY-NOTICES from its used pack and
+sealed content hashes; historical runtime14 notice/qualification is not reused as
+runtime15 proof. This source note is not a qualification or publication receipt.
