@@ -89,7 +89,7 @@ def fixed_commands(phase, dotnet, rid, evidence, sha, nonce):
         return [[str(dotnet), 'run', '--project', tests, '-c', 'Release',
                  '-p:RuntimeIdentifier=' + rid, '-p:SelfContained=true', '--no-build', '--no-restore', '--', '--work', str(evidence / 'tests')],
                 [sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'release_candidate_test.py', '-v']]
-    if phase == 'package':
+    if phase in ('package', 'package-retry'):
         return [[sys.executable, 'tools/package.py', '--rid', rid, '--commit', sha,
                  '--dotnet', str(dotnet), '--work', str(evidence / 'build'),
                  '--out', str(evidence / 'delivery')]]
@@ -378,8 +378,9 @@ def bounded_command(command, evidence, index, env, remaining, nonce):
     if failure is not None:
         raise failure
 
-def extract_native(evidence, rid, sha):
-    stage = evidence.parent / 'package'
+def extract_native(evidence, rid, sha, profile, admission):
+    stage = (qualified_retry_producer(profile, admission, argparse.Namespace(commit=sha))
+             if rid == 'win-x64' else evidence.parent / 'package')
     metadata = read(stage / 'build/archive.json')
     require(metadata['commit'] == sha and metadata['rid'] == rid and
             metadata['localCandidate'] is False, 'Exact native archive identity')
@@ -433,7 +434,8 @@ def inside(args, profile, admission, dotnet, rid):
                MSBUILDDISABLENODEREUSE='1', DOTNET_ROOT=str(dotnet.parent))
     start = time.monotonic()
     recovery = inside_recovery(profile, admission, args) if args.phase == 'recovery-lock' else None
-    if args.phase == 'consumer': extract_native(evidence, rid, args.commit)
+    if args.phase == 'package-retry': recovery = package_retry_child(profile, args)
+    if args.phase == 'consumer': extract_native(evidence, rid, args.commit, profile, admission)
     cap = profile['phases'][args.phase]
     failure = None
     try:
@@ -801,17 +803,382 @@ def bind_final_candidate(profile, admission, budget, args, rid):
     return budget
 
 
+def package_repair_authority(profile, admission, args):
+    from package import regular_input
+    config = profile['packageFilterRepair']
+    require(config['amendmentSha256'] == '4d4fae0e466b09219414b9385f7979fae939552a466968656aa774ee10396cad' and
+            config['beforeSha256'] == 'd44dfd4cef76a62505ec354df01a47095754e67aa9ac9440b9cf099131f6cbb5' and
+            config['baselineCommit'] == '4abce2532eb0698c913a6c8c5c5d302b3a188a16' and
+            config['baselineTree'] == '1fccfbc02a986d669ec71701832c7f5f39fa6a7a' and
+            config['wholeInvocationSeconds'] == config['reservedNativeDebitSeconds'] == 210 and
+            config['maxAttempts'] == 1 and config['producerRelative'] == 'package-retry',
+            'Exact one-successor package repair only')
+    base = Path(native(profile['evidenceRootWindows']))
+    before_path = regular_input(base / 'package-filter-repair-01/BEFORE-REPAIR.json', base)
+    require(config['beforeRelative'] == 'package-filter-repair-01/BEFORE-REPAIR.json' and
+            digest(before_path) == config['beforeSha256'], 'Before-repair snapshot identity')
+    before = read(before_path)
+    require(before['source']['commit'] == config['baselineCommit'] and
+            before['source']['tree'] == config['baselineTree'] and
+            before['beforeBudgetSha256'] == config['beforeBudgetSha256'] ==
+                '4e568bc30f671998657a087d043da3d135556b8f8aa1ac14cdcb6ffb9c58de27' and
+            before['elapsedSeconds'] == 139.67300000000978 and before['recoveryDebitSeconds'] == 90 and
+            len(before['fullAttempts']) == 5, 'Qualified source/full five-attempt prefix')
+    for item in before['preservedFiles']:
+        path = regular_input(before_path.parent / item['name'], before_path.parent)
+        require(path.stat().st_size == item['bytes'] and digest(path) == item['sha256'],
+                'Preserved before-repair bytes changed')
+    for record in before['evidence']:
+        folder = Path(native(record['attempt']['evidence']))
+        require(folder.is_relative_to(base), 'Historical attempt path')
+        for item in record['topLevelReceiptIdentities']:
+            path = regular_input(folder / item['name'], folder)
+            require(path.stat().st_size == item['bytes'] and digest(path) == item['sha256'],
+                    'Original attempt evidence changed')
+    binding = admission['packageFilterSuccessor']
+    path = regular_input(native(binding['path']))
+    require(path.resolve() == Path(native(config['successorReceiptWindows'])).resolve() and
+            digest(path) == binding['sha256'], 'Manager-owned successor binding')
+    receipt = read(path)
+    allowed = ['tools/package.py', 'tools/project08-profile.json', 'tools/project08_launch.py']
+    require(receipt['schema'] == 'project08-package-filter-successor-v1' and
+            receipt['status'] == 'SIGNED_ONE_LOCAL_PACKAGE_FILTER_REPAIR_SUCCESSOR' and
+            receipt['purpose'] == 'LOCAL_PACKAGE_FILTER_REPAIR' and receipt['project'] == '08' and
+            receipt['amendmentSha256'] == config['amendmentSha256'] and
+            receipt['beforeSnapshotSha256'] == config['beforeSha256'] and
+            receipt['beforeSource'] == before['source'] and
+            receipt['beforeBudgetSha256'] == before['beforeBudgetSha256'] and
+            receipt['priorTransitionSha256'] == '0a665df0459ab7047494b04bb63e72d8e4c2a40ce9b6ce9fec3e8372676d0a08',
+            'Named qualified-baseline-to-one-successor closure')
+    after = source_snapshot(profile, args.commit)
+    require(receipt['afterCommit'] == args.commit != config['baselineCommit'] and
+            receipt['afterSource'] == after and
+            len(receipt['afterTree']) == 40 and all(c in '0123456789abcdef' for c in receipt['afterTree']) and
+            receipt['signedCommitVerified'] is True and
+            receipt['signingFingerprint'] == 'SHA256:AgU5bZlJSjUu0KsWMmVEEr+BfXpcMVNroTA33bHcQdU' and
+            receipt['allowedChangedFiles'] == allowed and receipt['sdkInputs'] == admission['inputs'],
+            'Signed successor/source/SDK identity')
+    old_files, new_files = before['source']['fileHashes'], after['fileHashes']
+    require(set(old_files) == set(new_files) and
+            sorted(p for p in old_files if old_files[p] != new_files[p]) == allowed,
+            'Only the exact three packaging repair sources may differ')
+    return config, before, receipt, binding['sha256']
+
+def bind_package_successor(profile, admission, budget, args, rid):
+    config, before, receipt, receipt_sha = package_repair_authority(profile, admission, args)
+    validate_budget(budget, profile, rid)
+    if rid == 'win-x64':
+        require(budget['elapsedSeconds'] >= before['elapsedSeconds'] and
+                budget['recoveryChargedSeconds'] >= 90 and
+                budget['attempts'][:5] == before['fullAttempts'] and
+                json.dumps(budget['attempts'][:5], separators=(',',':')) ==
+                    json.dumps(before['fullAttempts'], separators=(',',':')) and
+                budget['transitionReceiptSha256'] == receipt['priorTransitionSha256'] and
+                budget['recoveryMarkerSha256'] == 'd3c605bab743a192da89138c8c4a300c3f7fae0c8c10eeffa1ae74d6bb88879a',
+                'No elapsed/attempt/debit/marker loss')
+        if budget.get('packageFilterSuccessorReceiptSha256'):
+            require(budget['packageFilterSuccessorReceiptSha256'] == receipt_sha and
+                    budget['candidate'] == args.commit and len(budget['identityTransitions']) == 1,
+                    'No second source succession')
+        else:
+            require(budget['candidate'] == config['baselineCommit'] and
+                    digest(fixed_state(profile, rid) / 'native-budget.json') == before['beforeBudgetSha256'] and
+                    budget['attempts'] == before['fullAttempts'] and
+                    budget['elapsedSeconds'] == before['elapsedSeconds'] and
+                    budget['recoveryChargedSeconds'] == 90 and not budget.get('identityTransitions'),
+                    'Exact original ledger required for first successor carry')
+            budget['candidate'] = args.commit
+            budget['packageFilterSuccessorReceiptSha256'] = receipt_sha
+            budget['identityTransitions'] = [{'purpose': 'LOCAL_PACKAGE_FILTER_REPAIR',
+                'beforeCommit': config['baselineCommit'], 'afterCommit': args.commit,
+                'receiptSha256': receipt_sha, 'beforeBudgetSha256': before['beforeBudgetSha256']}]
+        retries = [a for a in budget['attempts'][5:] if a['phase'] == 'package-retry']
+        require(len(retries) <= 1, 'No second package retry')
+        if retries:
+            require(budget['packageRetryChargedSeconds'] >= 210 and
+                    budget['elapsedSeconds'] >= before['elapsedSeconds'] + budget['packageRetryChargedSeconds'],
+                    'Retry reservation/debit cannot be lost')
+    else:
+        require(rid == 'linux-x64' and budget['candidate'] == args.commit, 'Original Linux RID budget/source')
+        if not budget.get('packageFilterSuccessorReceiptSha256'):
+            require(budget['elapsedSeconds'] == 0 and budget['attempts'] == [], 'No Linux ledger migration/reset')
+            budget['packageFilterSuccessorReceiptSha256'] = receipt_sha
+        require(budget['packageFilterSuccessorReceiptSha256'] == receipt_sha, 'Linux successor identity changed')
+    return budget
+
+def reserve_package_retry(profile, admission, args, holder, origin, budget):
+    config, before, receipt, receipt_sha = package_repair_authority(profile, admission, args)
+    state = fixed_state(profile, 'win-x64')
+    require(os.name == 'nt' and args.phase == 'package-retry' and
+            Path(args.evidence).resolve() == (state / 'package-retry').resolve() and
+            not any(a['phase'] == 'package-retry' for a in budget['attempts']) and
+            budget['attempts'] == before['fullAttempts'], 'One fixed Windows package retry only')
+    marker_path, result_path = state/config['markerName'], state/config['resultName']
+    require(config['markerName'] == 'package-retry-marker.json' and
+            config['resultName'] == 'package-retry-result.json' and
+            not marker_path.exists() and not result_path.exists(), 'Retry already USED or ambiguous')
+    require(budget['elapsedSeconds'] + 210 <= 900, 'Cannot reserve whole210 inside existing native900')
+    marker = {'schema': 'project08-package-retry-marker-v1', 'status': 'STARTED_USED',
+        'project': '08', 'rid': 'win-x64', 'candidate': args.commit, 'sourceTree': receipt['afterTree'],
+        'successorReceiptSha256': receipt_sha, 'beforeSnapshotSha256': config['beforeSha256'],
+        'inputAdmissionSha256': digest(native(profile['admissionWindows'])),
+        'launcherSha256': digest(__file__), 'profileSha256': digest(PROFILE),
+        'packageHelperSha256': digest(ROOT/'tools/package.py'),
+        'nonce': holder['randomToken'], 'ownerPID': holder['ownerPID'],
+        'ownerProcessStartIdentity': holder['ownerProcessStartIdentity'],
+        'originMonotonic': origin, 'deadlineMonotonic': origin+210,
+        'wholeInvocationMaximumSeconds': 210, 'reservedNativeDebitSeconds': 210,
+        'beforeNativeElapsedSeconds': budget['elapsedSeconds'], 'evidenceDirectory': str(state/'package-retry')}
+    write(marker_path, marker)  # Interrupted STARTED is permanently USED, even before ledger completion.
+    budget['elapsedSeconds'] += 210
+    budget['packageRetryChargedSeconds'] = 210
+    budget['packageRetryMarkerSha256'] = digest(marker_path)
+    budget['attempts'].append({'phase': 'package-retry', 'state': 'STARTED_USED',
+        'reservedSeconds': 210, 'markerSha256': digest(marker_path), 'candidate': args.commit,
+        'successorReceiptSha256': receipt_sha, 'evidence': str(state/'package-retry')})
+    replace_owned_json(state/'native-budget.json', budget, holder['randomToken'])
+    return {'marker': marker, 'markerPath': marker_path, 'resultPath': result_path,
+            'budget': budget, 'budgetPath': state/'native-budget.json'}
+
+def package_retry_child(profile, args):
+    config = profile['packageFilterRepair']
+    marker = read(fixed_state(profile, 'win-x64')/config['markerName'])
+    require(os.name == 'nt' and marker['status'] == 'STARTED_USED' and
+            marker['nonce'] == args.nonce and marker['ownerPID'] == os.getppid() and
+            marker['candidate'] == args.commit and marker['launcherSha256'] == digest(__file__) and
+            marker['profileSha256'] == digest(PROFILE) and
+            marker['packageHelperSha256'] == digest(ROOT/'tools/package.py') and
+            marker['inputAdmissionSha256'] == digest(native(profile['admissionWindows'])) and
+            Path(marker['evidenceDirectory']).resolve() == Path(args.evidence).resolve(),
+            'Exact retry child/parent/source/admission binding')
+    return marker
+
+def retry_archive_identity(profile, admission, args, marker):
+    from package import regular_input
+    state = fixed_state(profile, 'win-x64')
+    stage = state/'package-retry'
+    metadata_path = regular_input(stage/'build/archive.json', stage)
+    metadata = read(metadata_path)
+    filename = 'fix-session-recovery-harness-v0.1.0-preview.2-win-x64.zip'
+    archive = stage/'delivery'/filename
+    # Archive is deliberately larger than the bounded JSON-input limit.
+    require(not any(p.is_symlink() or (getattr(p.stat(follow_symlinks=False),'st_file_attributes',0)&0x400)
+                    for p in (archive,*archive.parents)) and archive.is_file() and
+            archive.stat().st_size <= 64*1024*1024, 'Fixed regular retry archive')
+    require(metadata['commit'] == args.commit == marker['candidate'] and
+            metadata['rid'] == 'win-x64' and metadata['localCandidate'] is False and
+            metadata['sourceTree'] == marker['sourceTree'] and
+            metadata['packageHelperSha256'] == marker['packageHelperSha256'] ==
+                digest(ROOT/'tools/package.py') and
+            Path(native(metadata['archive'])).resolve() == archive.resolve() and
+            metadata['bytes'] == archive.stat().st_size and metadata['sha256'] == digest(archive),
+            'Actual retry archive/source/tree/RID/member identity')
+    with zipfile.ZipFile(archive) as bundle:
+        info = bundle.getinfo(filename.removesuffix('.zip')+'/BUILD-MANIFEST.json')
+        require(info.file_size <= 65536 and (info.external_attr >> 16) & 0o170000 != 0o120000,
+                'Bounded actual retry manifest')
+        manifest = json.loads(bundle.read(info))
+    require(manifest['sourceCommit'] == args.commit and manifest['sourceTree'] == marker['sourceTree'] and
+            manifest['rid'] == 'win-x64' and manifest['sdkVersion'] == '10.0.404' and
+            manifest['runtimeVersion'] == '10.0.15' and manifest['selfContained'] is True and
+            manifest['localCandidate'] is False, 'Actual archive manifest source/tree/RID')
+    return {'metadataSha256': digest(metadata_path), 'archiveSha256': digest(archive),
+            'archiveBytes': archive.stat().st_size, 'sourceTree': marker['sourceTree']}
+
+def finish_package_retry(context, profile, admission, args, terminal, code):
+    marker, budget = context['marker'], context['budget']
+    elapsed = time.monotonic()-marker['originMonotonic']
+    charge = max(210, elapsed, budget['packageRetryChargedSeconds'])
+    budget['elapsedSeconds'] += charge-budget['packageRetryChargedSeconds']
+    budget['packageRetryChargedSeconds'] = charge
+    budget['attempts'][-1]['state'] = 'TERMINAL_OBSERVER_CLOSE_REQUIRED' if terminal else 'AMBIGUOUS_USED'
+    archive, error = None, None
+    if terminal and code == 0:
+        try: archive = retry_archive_identity(profile, admission, args, marker)
+        except Exception as failure: error = type(failure).__name__+': '+str(failure)
+    business = terminal and code == 0 and archive is not None and elapsed <= 210
+    result = {'schema': 'project08-package-retry-result-v1', 'project': '08', 'rid': 'win-x64',
+        'status': 'ACTUAL_PROCESS_EXIT_OBSERVATION_REQUIRED', 'candidate': args.commit,
+        'markerSha256': digest(context['markerPath']), 'nonce': marker['nonce'],
+        'successorReceiptSha256': marker['successorReceiptSha256'],
+        'controllerCodeBeforeFinalBookkeeping': code, 'terminal': terminal,
+        'businessPassBeforeObservation': business, 'archive': archive, 'archiveError': error,
+        'elapsedSecondsLowerBound': elapsed, 'chargedSecondsLowerBound': charge,
+        'wholeInvocationMaximumSeconds': 210, 'deadlineExceededObserved': elapsed > 210}
+    write(context['resultPath'], result)
+    replace_owned_json(context['budgetPath'], budget, marker['nonce'])
+    final_elapsed = time.monotonic()-marker['originMonotonic']
+    if final_elapsed > budget['packageRetryChargedSeconds']:
+        budget['elapsedSeconds'] += final_elapsed-budget['packageRetryChargedSeconds']
+        budget['packageRetryChargedSeconds'] = final_elapsed
+        replace_owned_json(context['budgetPath'], budget, marker['nonce'])
+    return business and final_elapsed <= 210
+
+def close_package_retry(profile, admission, args):
+    from package import regular_input
+    config, before, receipt, receipt_sha = package_repair_authority(profile, admission, args)
+    state = fixed_state(profile, 'win-x64')
+    require(os.name == 'nt' and Path(args.evidence).resolve() == (state/'package-retry').resolve(),
+            'Fixed Windows data-only observer close')
+    marker_path = regular_input(state/'package-retry-marker.json', state)
+    observer_path = regular_input(state/'package-retry-process-observer.json', state)
+    result_path = state/'package-retry-result.json'
+    result_sha = digest(regular_input(result_path, state)) if result_path.exists() else None
+    marker, observer = read(marker_path), read(observer_path)
+    result = read(result_path) if result_sha else None
+    require(marker['status'] == 'STARTED_USED' and marker['candidate'] == args.commit and
+            marker['successorReceiptSha256'] == receipt_sha and
+            observer['markerSha256'] == digest(marker_path) and observer['nonce'] == marker['nonce'] and
+            observer['candidate'] == args.commit and observer['resultSha256'] == result_sha and
+            observer['schema'] == 'project08-package-retry-process-observer-v1' and
+            observer['controllerPid'] == marker['ownerPID'] and
+            observer['controllerStartIdentity'] == marker['ownerProcessStartIdentity'] and
+            observer['inputAdmissionSha256'] == marker['inputAdmissionSha256'] and
+            observer['processExited'] is True and isinstance(observer['observedControllerExit'], int) and
+            isinstance(observer['externalDeadlineKill'], bool) and
+            isinstance(observer['actualWholeAttemptSeconds'], (int,float)) and
+            (result['elapsedSecondsLowerBound'] if result else 0) <= observer['actualWholeAttemptSeconds'] < 1000000 and
+            marker['sourceTree'] == receipt['afterTree'] and
+            marker['launcherSha256'] == digest(__file__) and marker['profileSha256'] == digest(PROFILE) and
+            marker['packageHelperSha256'] == digest(ROOT/'tools/package.py'),
+            'Actual owned controller exit/start/duration observation required')
+    budget_path = state/'native-budget.json'
+    budget = bind_package_successor(profile, admission, read(budget_path), args, 'win-x64')
+    require(budget['packageRetryMarkerSha256'] == digest(marker_path) and
+            budget['attempts'][-1]['phase'] == 'package-retry' and
+            budget['attempts'][-1]['markerSha256'] == digest(marker_path), 'Exact USED retry ledger')
+    closure_path = state/'package-retry-observation-closure.json'
+    require(not closure_path.exists(), 'Observation already closed; no overwrite')
+    old_charge = budget['packageRetryChargedSeconds']
+    charge = max(210, old_charge, result['chargedSecondsLowerBound'] if result else 210,
+                 observer['actualWholeAttemptSeconds'])
+    budget['elapsedSeconds'] += charge-old_charge
+    budget['packageRetryChargedSeconds'] = charge
+    expected = {'phase-result.json','launcher-terminal.json','0-subprocess-result.json',
+                'windows-job-terminal.json','0-subprocess-membership.json','kernel-membership.json'}
+    evidence_error = None
+    try:
+        require(set(observer['producerReceiptHashes']) <= expected, 'No arbitrary producer receipt path')
+        for name, sha in observer['producerReceiptHashes'].items():
+            require(digest(regular_input(state/'package-retry'/name,state)) == sha,
+                    'Observed producer receipt changed')
+        require(set(observer['producerReceiptHashes']) == expected and result is not None,
+                'Interrupted/partial producer is failure')
+        require(result['markerSha256'] == digest(marker_path) and result['nonce'] == marker['nonce'] and
+                result['candidate'] == args.commit, 'Retry result binding')
+    except Exception as error:
+        evidence_error = type(error).__name__+': '+str(error)
+    success = (evidence_error is None and result['businessPassBeforeObservation'] and result['terminal'] and
+               not result['deadlineExceededObserved'] and observer['observedControllerExit'] == 0 and
+               not observer['externalDeadlineKill'] and observer['actualWholeAttemptSeconds'] <= 210 and
+               budget['elapsedSeconds'] <= 900)
+    budget['attempts'][-1]['state'] = 'OBSERVED_TERMINAL_PASS' if success else 'OBSERVED_FAILURE_USED'
+    budget['attempts'][-1]['observedWholeControllerExit'] = observer['observedControllerExit']
+    budget['attempts'][-1]['actualWholeAttemptSeconds'] = observer['actualWholeAttemptSeconds']
+    replace_owned_json(budget_path, budget, marker['nonce'])
+    closure = {'schema': 'project08-package-retry-closure-v1',
+        'status': 'OBSERVED_TERMINAL_PASS' if success else 'OBSERVED_FAILURE_USED',
+        'candidate': args.commit, 'nonce': marker['nonce'], 'markerSha256': digest(marker_path),
+        'resultSha256': result_sha, 'observerSha256': digest(observer_path),
+        'successorReceiptSha256': receipt_sha, 'chargedSeconds': charge,
+        'actualWholeAttemptSeconds': observer['actualWholeAttemptSeconds'],
+        'observedControllerExit': observer['observedControllerExit'], 'evidenceError': evidence_error,
+        'budgetSha256': digest(budget_path), 'archive': result['archive'] if result else None}
+    write(closure_path, closure)
+    return 0 if success else 125
+
+def qualified_retry_producer(profile, admission, args):
+    from package import regular_input
+    config, before, receipt, receipt_sha = package_repair_authority(profile, admission, args)
+    state = fixed_state(profile, 'win-x64')
+    marker_path = regular_input(state/'package-retry-marker.json', state)
+    result_path = regular_input(state/'package-retry-result.json', state)
+    observer_path = regular_input(state/'package-retry-process-observer.json', state)
+    closure = read(regular_input(state/'package-retry-observation-closure.json', state))
+    marker, result, observer = read(marker_path), read(result_path), read(observer_path)
+    require(closure['status'] == 'OBSERVED_TERMINAL_PASS' and
+            closure['candidate'] == args.commit == marker['candidate'] and
+            closure['successorReceiptSha256'] == receipt_sha == marker['successorReceiptSha256'] and
+            closure['markerSha256'] == result['markerSha256'] == digest(marker_path) and
+            closure['resultSha256'] == digest(result_path) and closure['observerSha256'] == digest(observer_path) and
+            closure['nonce'] == marker['nonce'] == result['nonce'] == observer['nonce'] and
+            closure['chargedSeconds'] >= 210 and closure['actualWholeAttemptSeconds'] <= 210 and
+            closure['observedControllerExit'] == observer['observedControllerExit'] == 0 and
+            observer['processExited'] is True and observer['resultSha256'] == digest(result_path) and
+            observer['actualWholeAttemptSeconds'] == closure['actualWholeAttemptSeconds'] and
+            observer['actualWholeAttemptSeconds'] >= result['elapsedSecondsLowerBound'] and
+            observer['inputAdmissionSha256'] == marker['inputAdmissionSha256'] and
+            not observer['externalDeadlineKill'] and
+            observer['controllerPid'] == marker['ownerPID'] and
+            observer['controllerStartIdentity'] == marker['ownerProcessStartIdentity'] and
+            marker['sourceTree'] == receipt['afterTree'] and
+            marker['launcherSha256'] == digest(__file__) and marker['profileSha256'] == digest(PROFILE) and
+            marker['packageHelperSha256'] == digest(ROOT/'tools/package.py') and
+            result['terminal'] and result['businessPassBeforeObservation'] and
+            not result['deadlineExceededObserved'], 'Successful observed fixed retry producer required')
+    stage = state/'package-retry'
+    require(set(observer['producerReceiptHashes']) == {'phase-result.json','launcher-terminal.json',
+            '0-subprocess-result.json','windows-job-terminal.json','0-subprocess-membership.json','kernel-membership.json'},
+            'Observed fixed producer inventory')
+    for name, sha in observer['producerReceiptHashes'].items():
+        require(digest(regular_input(stage/name, stage)) == sha, 'Actual producer evidence changed')
+    for relative in ('phase-result.json','launcher-terminal.json','0-subprocess-result.json','windows-job-terminal.json'):
+        data = read(regular_input(stage/relative, stage))
+        require(data['nonce'] == marker['nonce'], 'Producer phase/target/Job nonce')
+        if relative == 'phase-result.json':
+            require(data['complete'] and data['outcome'] == 'pass' and data['candidate'] == args.commit and data['phase'] == 'package-retry', 'Producer phase failed')
+        elif relative == 'windows-job-terminal.json':
+            require(data['terminal'] and data['rootExitObserved'] and data['rootExitCode'] == 0 and
+                    not data['cleanupRequested'] and data['controllerExitCode'] == 0, 'Producer Job failed/nonterminal')
+        elif relative == '0-subprocess-result.json':
+            require(data['complete'] and data['exitObserved'] and data['exitCode'] == 0 and
+                    data['drainComplete'] and not data['deadlineExpired'] and not data['killRequested'] and
+                    not data['stdoutOverflow'] and not data['stderrOverflow'], 'Producer target failed')
+        else:
+            require(data['exitCode'] == 0 and data['terminal'] and data['phase'] == 'package-retry',
+                    'Producer terminal failed')
+    target = read(stage/'0-subprocess-result.json')
+    member = read(stage/'0-subprocess-membership.json')
+    kernel = read(stage/'kernel-membership.json')
+    require(member['member'] and member['pid'] == target['pid'] and member['nonce'] == marker['nonce'] and
+            member['mechanism'] == kernel['mechanism'] == 'windows-job' and member['job'] == kernel['job'] and
+            kernel['memoryBytes'] == 2147483648 and kernel['processLimit'] == 256 and
+            int(kernel['cpuAffinity']).bit_count() == 2, 'Actual retry target/kernel binding')
+    archive = retry_archive_identity(profile, admission, args, marker)
+    require(archive == result['archive'] == closure['archive'], 'Producer archive bytes changed')
+    budget = bind_package_successor(profile, admission, read(state/'native-budget.json'), args, 'win-x64')
+    require(budget['packageRetryChargedSeconds'] >= closure['chargedSeconds'] and
+            any(item['phase'] == 'package-retry' and item['state'] == 'OBSERVED_TERMINAL_PASS'
+                for item in budget['attempts']), 'Producer ledger reservation/closure missing')
+    return stage
+
+def require_windows_consumer_before_linux(profile, admission, args):
+    qualified_retry_producer(profile, admission, args)
+    state = fixed_state(profile, 'win-x64')
+    phase = read(state/'consumer/phase-result.json')
+    terminal = read(state/'consumer/launcher-terminal.json')
+    consumer = read(state/'consumer/consumer/receipt.json')
+    require(phase['complete'] and phase['outcome'] == 'pass' and phase['candidate'] == args.commit and
+            phase['phase'] == terminal['phase'] == 'consumer' and
+            terminal['exitCode'] == 0 and terminal['terminal'] and
+            terminal['nonce'] == phase['nonce'] and consumer['commit'] == args.commit and
+            consumer['rid'] == 'win-x64' and
+            consumer['status'] == 'ACTUAL_SELF_CONTAINED_FIXED_FIX_HARNESS_PACKAGE_PASS' and
+            all('actual-scenario-'+name in consumer['checks'] for name in ('gap','resend','restart','gapfill')),
+            'Complete Windows producer/consumer before Linux native phases')
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--phase', choices=['probe', 'lock', 'recovery-lock', 'restore', 'build', 'tests', 'package', 'consumer'], required=True)
+    parser.add_argument('--phase', choices=['probe', 'lock', 'recovery-lock', 'restore', 'build', 'tests', 'package', 'package-retry', 'consumer'], required=True)
     parser.add_argument('--commit', required=True)
     parser.add_argument('--evidence', required=True)
+    parser.add_argument('--close-package-retry', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--witness', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--parent-pid', type=int, default=0, help=argparse.SUPPRESS)
     parser.add_argument('--inside', action='store_true', help=argparse.SUPPRESS)
     parser.add_argument('--nonce', default='', help=argparse.SUPPRESS)
     args = parser.parse_args()
-    origin = recovery_origin() if args.phase == 'recovery-lock' and not args.inside else None
+    origin = recovery_origin() if args.phase in ('recovery-lock','package-retry') and not args.inside and not args.close_package_retry else None
     profile, admission, dotnet, rid = load_admission(args.phase)
     require(len(args.commit) == 40 and all(c in '0123456789abcdef' for c in args.commit), 'Candidate identity')
     evidence = Path(args.evidence).resolve()
@@ -830,6 +1197,11 @@ def main():
             'nonce': args.nonce, 'pid': os.getpid(), 'parentPid': os.getppid(),
             'controls': controls, 'sdkOrApplicationInvoked': False})
         return 0
+    require(args.phase not in ('lock','recovery-lock'), 'Original lock opportunities consumed; no new generation')
+    require(not args.close_package_retry or args.phase == 'package-retry' and not args.inside,
+            'Fixed data-only retry close mode')
+    if rid == 'win-x64':
+        require(args.phase in ('probe','package-retry','consumer'), 'No Windows core/restore/test replay for packaging-only repair')
     if args.inside:
         require(len(args.nonce) == 32 and evidence.is_dir(), 'Internal binding')
         return inside(args, profile, admission, dotnet, rid)
@@ -837,8 +1209,12 @@ def main():
     if os.name == 'nt' and args.phase == 'lock':
         require(not (fixed_state(profile, rid) / profile['recoveryLock']['originalFailure']['relativeTerminal']).exists(),
                 'Original Windows lock opportunity exhausted; only admitted recovery-lock is available')
-    require(not evidence.exists(), 'Fresh evidence only')
-    evidence.mkdir(parents=True)
+    if args.close_package_retry:
+        require(evidence == (fixed_state(profile, 'win-x64')/'package-retry').resolve() and evidence.is_dir(),
+                'Fixed existing retry evidence for data-only close')
+    else:
+        require(not evidence.exists(), 'Fresh evidence only')
+        evidence.mkdir(parents=True)
     nonce = secrets.token_hex(16)
     if os.name != 'nt':
         bus = subprocess.run(['systemctl', '--user', 'is-system-running'], capture_output=True,
@@ -855,9 +1231,11 @@ def main():
     terminal = True  # No owned process has been created yet.
     phase_started = time.monotonic()
     budget_path = fixed_state(profile, rid) / 'native-budget.json'
-    budget, recovery, code = None, None, 125
+    budget, recovery, package_retry, code = None, None, None, 125
     native_started = False
     try:
+        if args.close_package_retry:
+            return close_package_retry(profile, admission, args)
         if args.phase == 'recovery-lock':
             recovery = reserve_recovery(profile, admission, args, holder, origin)
             require(time.monotonic() < origin + 90 - 12, 'Recovery setup exhausted whole window')
@@ -867,18 +1245,25 @@ def main():
                     'Used recovery missing budget; manager reconciliation required')
             budget = read(budget_path) if budget_path.exists() else empty_budget(profile, rid, args.commit)
             validate_budget(budget, profile, rid)
-            budget = bind_final_candidate(profile, admission, budget, args, rid)
-            require(not any(item['phase'] == args.phase for item in budget['attempts']),
-                    'Phase already attempted; no budget reset')
-            require(budget['elapsedSeconds'] + profile['phases'][args.phase] + 9 <= 900,
-                    'Native cumulative budget exhausted')
-            budget['attempts'].append({'phase': args.phase, 'state': 'STARTED', 'evidence': str(evidence)})
-            replace_owned_json(budget_path, budget, nonce)
-            native_started = True
+            budget = bind_package_successor(profile, admission, budget, args, rid)
+            if rid == 'linux-x64': require_windows_consumer_before_linux(profile, admission, args)
+            if args.phase == 'package-retry':
+                package_retry = reserve_package_retry(profile, admission, args, holder, origin, budget)
+                require(time.monotonic() < origin+210-12, 'Retry setup exhausted whole210')
+            else:
+                require(not any(item['phase'] == args.phase for item in budget['attempts']),
+                        'Phase already attempted; no budget reset')
+                require(budget['elapsedSeconds'] + profile['phases'][args.phase] + 9 <= 900,
+                        'Native cumulative budget exhausted')
+                if rid == 'win-x64': qualified_retry_producer(profile, admission, args)
+                budget['attempts'].append({'phase': args.phase, 'state': 'STARTED', 'evidence': str(evidence)})
+                replace_owned_json(budget_path, budget, nonce)
+                native_started = True
         command = [sys.executable, str(Path(__file__).resolve()), '--phase', args.phase,
                    '--commit', args.commit, '--evidence', str(evidence), '--inside', '--nonce', nonce]
-        deadline = recovery['marker']['deadlineMonotonic'] if recovery else None
-        ceiling = max(0, deadline - time.monotonic() - 6) if recovery else profile['phases'][args.phase] + 6
+        timed = package_retry or recovery
+        deadline = timed['marker']['deadlineMonotonic'] if timed else None
+        ceiling = max(0, deadline - time.monotonic() - 6) if timed else profile['phases'][args.phase] + 6
         terminal = False
         if os.name == 'nt':
             code, terminal = windows_start(command, ROOT, nonce, ceiling, evidence, deadline)
@@ -910,6 +1295,8 @@ def main():
             require(current['randomToken'] == nonce and current['ownerPID'] == os.getpid() and
                     current['ownerProcessStartIdentity'] == holder['ownerProcessStartIdentity'], 'Lease identity changed')
             lease.unlink()
+        if package_retry is not None:
+            if not finish_package_retry(package_retry, profile, admission, args, terminal, code): code = 125
         if recovery is not None:
             if not finish_recovery(recovery, args, terminal, code, phase_started - origin):
                 code = 125

@@ -137,6 +137,27 @@ def validate_reconciled_windows_outputs():
  identities['RUNTIME-PACKS.json']={'bytes':pin_path.stat().st_size,'sha256':sha(pin_path)}
  return identities
 
+def validate_package_member(package, member, sealed_test_lock):
+ relative=member.relative_to(package).as_posix()
+ guard(chr(92) not in relative and ':' not in relative and
+       all(part not in ('','..','.') for part in relative.split('/')) and
+       not any(ord(c)<32 for c in relative),'Unsafe package member path')
+ guard(not any(p.is_symlink() or
+       (getattr(p.stat(follow_symlinks=False),'st_file_attributes',0)&0x400)
+       for p in (member,*member.parents)),'Linked/reparse package member')
+ guard(member.is_file(),'Package member must be regular')
+ guard(not relative.lower().endswith(('.pdb','.sqlite','.db')),'Debug/database payload forbidden')
+ if '.tests' in relative.lower():
+  guard(relative=='runtime-locks/SessionHarness.Tests.lock.json','Test/probe payload forbidden')
+  expected=regular_input(sealed_test_lock,ROOT)
+  actual=member.read_bytes();baseline=expected.read_bytes()
+  guard(len(actual)==member.stat().st_size==expected.stat().st_size and
+        hashlib.sha256(actual).hexdigest()==sha(expected) and actual==baseline,
+        'Exact sealed test-lock bytes/size/hash required')
+  lock=json.loads(actual)
+  guard(lock.get('version')==1 and isinstance(lock.get('dependencies'),dict),'Test lock must be JSON lock data')
+ return relative
+
 def main():
  p=argparse.ArgumentParser();p.add_argument('--rid',choices=['win-x64','linux-x64'],required=True);p.add_argument('--commit',required=True);p.add_argument('--work',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--dotnet',default='dotnet');p.add_argument('--source',action='append');p.add_argument('--local-candidate',action='store_true');p.add_argument('--write-runtime-pins',action='store_true');a=p.parse_args()
  assets=json.loads((ROOT/'src/SessionHarness/obj/project.assets.json').read_text(encoding='utf-8')) if a.write_runtime_pins else None
@@ -208,7 +229,7 @@ def main():
  for f in sorted(package.rglob('*')):
   assert not f.is_symlink()
   if not f.is_file():continue
-  path=f.relative_to(package).as_posix();assert not path.lower().endswith(('.pdb','.sqlite','.db')) and '.tests' not in path.lower()
+  path=validate_package_member(package,f,ROOT/'locks/runtime'/a.rid/'SessionHarness.Tests.lock.json')
   files.append({'path':path,'bytes':f.stat().st_size,'sha256':sha(f)})
  assert sha(package/'FIX44.xml')=='a8111ec59d33053b45be975bbb7d6d1e9f2b6f4a160d832853fa0d8c627ea434'
  assert b'This product includes software developed by quickfixengine.org' in (package/'README.md').read_bytes()
@@ -225,6 +246,6 @@ def main():
     if f.is_file():
      info=t.gettarinfo(str(f),arcname=f.relative_to(work).as_posix());info.mode=0o755 if f.name in {'session-harness','createdump'} else 0o644;info.uid=info.gid=0;info.uname=info.gname=''
      with f.open('rb') as stream:t.addfile(info,stream)
- result={'archive':str(archive.resolve()),'bytes':archive.stat().st_size,'sha256':sha(archive),'commit':a.commit,'rid':a.rid,'payloadFiles':len(files),'localCandidate':a.local_candidate}
+ result={'sourceTree':manifest['sourceTree'],'packageHelperSha256':sha(Path(__file__)),'archive':str(archive.resolve()),'bytes':archive.stat().st_size,'sha256':sha(archive),'commit':a.commit,'rid':a.rid,'payloadFiles':len(files),'localCandidate':a.local_candidate}
  (work/'archive.json').write_text(json.dumps(result,indent=2)+'\n',encoding='utf-8');print(json.dumps(result))
 if __name__=='__main__':main()

@@ -21,7 +21,8 @@
     "package": 210,
     "consumer": 120,
     "probe": 10,
-    "recovery-lock": 90
+    "recovery-lock": 90,
+    "package-retry": 210
   },
   "admissionWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave3-state/project08-local-admission-20261114.json",
   "canonicalLeaseWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave2-state/LOCAL-FIXTURE-LEASE.json",
@@ -68,5 +69,26 @@
       "tests/SessionHarness.Tests/packages.lock.json": "2d49a858c78ebec44dec9c9185e5e4d38faec8fc0c547392f6353711ade65a34"
     },
     "route": "Fixed singular RuntimeIdentifier and SelfContained=true throughout RID lock/restore/build/run/publish. No alternate lock lookup or third Windows lock."
+  },
+  "packageFilterRepair": {
+    "amendmentWindows": "C:/Users/Office/.codex/visualizations/2026/11/03/01a1a0c7-ea18-7642-89d9-12d79bed9f19/project08-exact-lockdata-package-retry-amendment-20261114.json",
+    "amendmentSha256": "4d4fae0e466b09219414b9385f7979fae939552a466968656aa774ee10396cad",
+    "beforeRelative": "package-filter-repair-01/BEFORE-REPAIR.json",
+    "beforeSha256": "d44dfd4cef76a62505ec354df01a47095754e67aa9ac9440b9cf099131f6cbb5",
+    "successorReceiptWindows": "E:/Codex WorkSpace/Git Projects/portfolio-management/development-management-20261110/wave3-state/project08-package-filter-successor-20261114.json",
+    "purpose": "LOCAL_PACKAGE_FILTER_REPAIR",
+    "baselineCommit": "4abce2532eb0698c913a6c8c5c5d302b3a188a16",
+    "baselineTree": "1fccfbc02a986d669ec71701832c7f5f39fa6a7a",
+    "beforeBudgetSha256": "4e568bc30f671998657a087d043da3d135556b8f8aa1ac14cdcb6ffb9c58de27",
+    "wholeInvocationSeconds": 210,
+    "reservedNativeDebitSeconds": 210,
+    "maxAttempts": 1,
+    "producerRelative": "package-retry",
+    "markerName": "package-retry-marker.json",
+    "resultName": "package-retry-result.json",
+    "observerName": "package-retry-process-observer.json",
+    "closureName": "package-retry-observation-closure.json",
+    "observerContract": "Actual owned controller process creation/exit/exitCode observed externally. Fixed --close-package-retry data-only mode accounts max210/actual without refund/doublecharge; missing/unknown/overrun observation is failure/HOLD before consumer.",
+    "nativeOrder": "Complete amended Windows package-retry/consumer then existing Linux restore/build/tests/package/consumer. No Linux retry or new lock."
   }
 }
