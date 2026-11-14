@@ -224,3 +224,22 @@ requests use octet-stream. That root-credential comparison is not future
 Actions-token success, and does not determine the older tag2/tag3 failures.
 Preview5 still requires its own actual Actions-token READY and native/draft/
 signature/download evidence; source or mock tests alone do not establish delivery.
+
+## Release tooling and independent draft recovery
+
+The frozen preview5 runtime/source tag points to commit
+[1064b609](https://github.com/pouriajamali/fix-session-recovery-harness/commit/1064b609564ff9df44cf08b273685e418eef2d4a).
+Later release-tooling commits on main do not replace that runtime or its assets.
+Its [source CI43645342809](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43645342809)
+succeeded. [Tag CI43646245026](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43646245026)
+passed real Actions-token readiness, both native jobs and archive/source checks,
+then failed after creating the five-asset draft: the by-tag endpoint returned404
+for the unpublished draft. The whole tag run remains FAILURE.
+
+Corrected tooling uses authenticated bounded list -> unique exact draft/tag ->
+numeric ID. An independently derived stage uses actual five-file downloads,
+original native proofs, all53 source Git blobs and separate provenance; it is
+never original CI DRAFT-STAGE or a retrospective tag-CI success claim.
+[Recovery method and limits](docs/PREVIEW5-DRAFT-METADATA-RECOVERY.md) describe
+the separate exact tooling CI and signing/publication gates. New-head CI builds
+validate tooling changes and are not promoted as preview5 runtime assets.

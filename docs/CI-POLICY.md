@@ -239,3 +239,38 @@ four entries/145760489B. New source7 and tag8 reserve40minutes each; tag8 reserv
 ninth/manual/rerun is granted and the zero-dollar budget/settings are unchanged.
 The same tag-only readiness must pass using its actual Actions token before
 SDK/native work; source runs skip that token probe.
+
+## Preview5 draft metadata reconciliation
+
+Runtime/source stays1064b609564ff9df44cf08b273685e418eef2d4a. Its source CI43645342809
+succeeded. Tag CI43646245026 completed token/native/carrier/archive/source checks,
+created five draft assets, then failed a published-by-tag metadata lookup.
+No original bound DRAFT-STAGE was emitted; the whole tag run remains FAILURE.
+
+The fixed draft reader uses authenticated api.github.com GETs only:
+releases?per_page=10&page=1..2 -> unique exact current draft/tag -> releases/<ID>.
+A fresh ID read must match the same five uploaded asset IDs/sizes/digests and
+local expected stage when supplied. No by-tag lookup, redirect, retry, public
+fallback or mutation exists. Metadata<=131072B/response,<=393216B total,
+<=3requests/60s; output is CreateNew private filtered JSON. Public diagnostics
+are finite codes/status only, never raw API/error/token/URI data. The CLI is
+bounded Ubuntu CI tooling; application clients/platform support is unchanged.
+
+Standalone affected tests run in ci_policy. One readonly metadata integration
+job<=5min, contents:write solely for draft visibility, runs only for a main
+push whose signed commit message includes [project08-draft-metadata-check-v1].
+Its audited helper has fixed GETs only. Ordinary future main commits without
+the marker, PRs and tags skip that job. Existing source/native classification,
+tag/manual validation, dependencies, caps and permissions elsewhere are unchanged.
+The repair commit needs whole successful exact CI. Its new-head archives are
+not promoted into the frozen1064 release.
+
+Independent recovery receives five actual files and original tag-native proofs,
+validates members/source53/SUMS/key and derives a stage with the original pure
+validators. A separate provenance sidecar states missing original CI stage and
+failed whole tag CI. New exact signing/publication authorization remains required.
+
+Only event9/40runner-min is added: max9events/360minutes. All prior8/320 and
+448MiB reservations stay retained; cache max450MiB, actual6entries218657330B.
+No new artifacts/cache/tag/draft; policy5+native30+readonlymetadata5 fits40.
+No automatic tenth/manual/rerun/refund/reset/paid capacity/settings is granted.
