@@ -49,8 +49,8 @@
     }
   },
   "artifactBudget": {
-    "maxEvents": 3,
-    "maxRunnerMinutes": 120,
+    "maxEvents": 4,
+    "maxRunnerMinutes": 160,
     "maxAggregateMiB": 226,
     "ordinaryDays": 3,
     "tagManualDays": 7,
@@ -60,8 +60,8 @@
     "maxStageReserveMiB": 1,
     "eventEnvelopeMiB": {
       "source": 0,
-      "manual": 112,
-      "tag": 112,
+      "failedTag": 112,
+      "recoveryTag": 112,
       "total": 224,
       "headroom": 2
     }
@@ -83,5 +83,20 @@
     "maxNewCacheMiBTotal": 226,
     "cacheLifecycle": "Platform default; no expiration, settings or cleanup change",
     "sourceZipBytes": 1048576
+  },
+  "recoveryLedger": {
+    "chargedEvents": 2,
+    "priorRunnerReservationsMinutes": 80,
+    "newSourceEventNumber": 3,
+    "newSourceReservationMinutes": 40,
+    "newTagEventNumber": 4,
+    "newTagReservationMinutes": 40,
+    "failedTagReservationMiB": 112,
+    "actualFailedTagCacheBytes": 72866260,
+    "newTagReservationMiB": 112,
+    "reserveMiB": 2,
+    "noRefundOrReset": true,
+    "manualContingencyGranted": false,
+    "additionalEventAutomatic": false
   }
 }

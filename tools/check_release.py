@@ -15,7 +15,7 @@ def bounded_json(path):
  return json.loads(path.read_text(encoding='utf-8-sig'),object_pairs_hook=pairs)
 
 def stage_input(directory,proof_root,commit,tag,run_id,output):
- assert tag=='v0.1.0-preview.2' and re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('[0-9a-f]{40}',commit)
+ assert tag=='v0.1.0-preview.3' and re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('[0-9a-f]{40}',commit)
  from project08_hosted_proof import validate_bundle,source_data,archive_identity,archive_name
  source=source_data(*(subprocess.check_output(['git','show',commit+':'+name],cwd=ROOT) for name in
   ('tools/project08-hosted-profile.json','tools/project08_hosted.py','tools/project08-sdk404-members.jsonl','tools/package.py')))
@@ -42,7 +42,7 @@ def stage_input(directory,proof_root,commit,tag,run_id,output):
 def bind_draft(stage_path,draft_path,output):
  stage=bounded_json(stage_path);draft=bounded_json(draft_path)
  assert stage['schema']=='project08-draft-stage-v1' and draft['draft'] is True and draft['prerelease'] is True
- assert draft['tag_name']==stage['tag']=='v0.1.0-preview.2'
+ assert draft['tag_name']==stage['tag']=='v0.1.0-preview.3'
  assert len(draft['assets'])==5 and {v['name'] for v in draft['assets']}==set(stage['assets'])
  assert len({v['id'] for v in draft['assets']})==5
  for item in draft['assets']:

@@ -16,12 +16,18 @@ These are observations of four fixed cases, not a general exactly-once, crash
 durability, counterparty certification or production guarantee. The
 [decision/test map](docs/CASE-STUDY.md) identifies the tests and limitations.
 
-Source candidate: **0.1.0-preview.2**, SDK10.0.404/runtime10.0.15, report-v2.
-Native qualification and signed publication of this candidate are pending; no release claim follows from source preparation.
+Source/release version: **0.1.0-preview.3**, SDK10.0.404/runtime10.0.15, report-v2.
+[Preview3 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.3).
 
-Frozen published preview: **v0.1.0-preview.1** (three cases/runtime14). [Downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
-and [checksum/signature verification](PROVENANCE.md). A missing release/signature
-is incomplete publication; do not bypass verification.
+Install only from a published release containing `SHA256SUMS.txt`,
+`SHA256SUMS.txt.sig` and the pinned public key; follow
+[checksum/signature verification](PROVENANCE.md). Source, a tag or CI success
+alone does not establish publication. If the release page or signature is
+missing, publication is incomplete; do not bypass verification.
+
+Legacy/frozen preview: **v0.1.0-preview.1** (three cases/runtime14).
+[Legacy preview1 downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
+belong to that frozen version.
 
 ## Try it
 
@@ -145,13 +151,13 @@ and dependencies retain their own notices. No private/shared/employer/customer
 code, dictionary, contract or data is included. No deployment, market study,
 customer, revenue, security certification or independent-skill claim is made.
 
-[CI resource policy](docs/CI-POLICY.md): documentation-only changes get real lightweight document/pipeline checks; source, tag and manual runs retain native validation. Published runtime tags and release assets remain unchanged.
+[CI resource policy](docs/CI-POLICY.md): documentation-only changes get real lightweight document/pipeline checks; source, tag and manual runs retain native validation. Previously published runtime tags and release assets remain immutable.
 
 ## Source readability
 
-The current source expands compact C# layout for review. The published preview links identify its frozen runtime release. Formatting preserves complete syntax, token text and values, comments and directives; it does not introduce a runtime behavior or performance claim.
+The current source expands compact C# layout for review. The legacy preview1 links identify its frozen runtime release. Formatting preserves complete syntax, token text and values, comments and directives; it does not introduce a runtime behavior or performance claim.
 
-To reproduce a published package, use its exact original runtime source: [v0.1.0-preview.1 source](https://github.com/pouriajamali/fix-session-recovery-harness/tree/330ae8f927395564937ed1043510d60a87b9987d) (`330ae8f927395564937ed1043510d60a87b9987d`). Later `main` layout is reviewed separately from those frozen release commits.
+To reproduce a published package, use the exact source archive/commit identified by that release's signed checksums and provenance. The [legacy/frozen v0.1.0-preview.1 source](https://github.com/pouriajamali/fix-session-recovery-harness/tree/330ae8f927395564937ed1043510d60a87b9987d) (`330ae8f927395564937ed1043510d60a87b9987d`) belongs specifically to preview1/runtime14. Review later `main` snapshots separately from those frozen release commits.
 
 ## Candidate process diagnostics
 
@@ -183,5 +189,17 @@ same-run cache handoff; its expected digest and file hashes come from trusted
 producer outputs outside the cache. Aggregation requires authenticated actual
 save evidence, exact availability/key outputs and actual archive/proof byte
 bindings before draft staging. DRAFT-STAGE is a typed finite log frame. No SDK or
-execution result is reused from cache. The configured cache limit is UNKNOWN;
+execution result is reused from cache. The prepared profile does not establish a configured cache limit;
 availability and the <=226MiB envelope remain actual-event gates.
+
+Preview3 recovery details are described in the
+[preview3 release notes](docs/RELEASE-v0.1.0-preview.3.md).
+[Preview2 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43624690595)
+completed both native jobs, then failed in aggregate cache-metadata validation
+before restore or draft creation. The reader did not admit the observed
+`refs/heads/refs/tags/v0.1.0-preview.2` representation. Preview3 admits only its
+two fixed expected-ref representations and requires its own source/tag evidence.
+The preview2 tag, source and evidence stay immutable. Use the
+[preview3 release page](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.3)
+for availability and actual release evidence. Publication must be established
+by its published, verified signed assets; source/tag/CI alone is insufficient.
