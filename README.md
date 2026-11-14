@@ -16,8 +16,8 @@ These are observations of four fixed cases, not a general exactly-once, crash
 durability, counterparty certification or production guarantee. The
 [decision/test map](docs/CASE-STUDY.md) identifies the tests and limitations.
 
-Source/release version: **0.1.0-preview.4**, SDK10.0.404/runtime10.0.15, report-v2.
-[Preview4 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.4).
+Source/release version: **0.1.0-preview.5**, SDK10.0.404/runtime10.0.15, report-v2.
+[Preview5 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5).
 
 Install only from a published release containing `SHA256SUMS.txt`,
 `SHA256SUMS.txt.sig` and the pinned public key; follow
@@ -190,17 +190,17 @@ producer outputs outside the cache. Aggregation requires authenticated actual
 save evidence, exact availability/key outputs and actual archive/proof byte
 bindings before draft staging. DRAFT-STAGE is a typed finite log frame. No SDK or
 execution result is reused from cache. The prepared profile does not establish a configured cache limit;
-availability and the <=338MiB envelope remain actual-event gates.
+availability and the <=450MiB envelope remain actual-event gates.
 
-Preview4 recovery details are described in the
-[preview4 release notes](docs/RELEASE-v0.1.0-preview.4.md).
+Preview5 recovery details are described in the
+[preview5 release notes](docs/RELEASE-v0.1.0-preview.5.md).
 [Preview2 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43624690595)
 completed both native jobs, then failed in aggregate expect-carriers before
 restore or draft creation. Separately, the preview2 reader did not admit the observed
-`refs/heads/refs/tags/v0.1.0-preview.2` representation. Preview4 admits only its
+`refs/heads/refs/tags/v0.1.0-preview.2` representation. Preview5 admits only its
 two fixed expected-ref representations and requires its own source/tag evidence.
 The preview2 tag, source and evidence stay immutable. Use the
-[preview4 release page](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.4)
+[preview5 release page](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
 for availability and actual release evidence. Publication must be established
 by its published, verified signed assets; source/tag/CI alone is insufficient.
 
@@ -212,3 +212,15 @@ reconstruct that failure. Preview4 replaces the opaque reader with bounded
 typed HTTPS and finite first-stage diagnostics; this is not proof that the
 unknown earlier cause has been fixed. Its tag-only READ_ONLY_TRANSPORT_PREFLIGHT
 checks same-SHA source-run log and cache-read access before SDK/native work.
+
+[Preview4 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43642620238)
+stopped in READ_ONLY_TRANSPORT_PREFLIGHT at READINESS_JOB_LOG/HTTP_STATUS415,
+before SDK/native/cache/draft/signing work. Its API log request used
+Accept: application/octet-stream. A paired read using the same endpoint,
+API version and root credential, varying only Accept, returned415 for octet
+and302 for application/vnd.github+json. Preview5 uses JSON Accept for every
+api.github.com GET, including log redirect requests; only unsigned storage
+requests use octet-stream. That root-credential comparison is not future
+Actions-token success, and does not determine the older tag2/tag3 failures.
+Preview5 still requires its own actual Actions-token READY and native/draft/
+signature/download evidence; source or mock tests alone do not establish delivery.

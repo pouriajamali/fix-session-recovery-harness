@@ -14,10 +14,10 @@ This workflow policy separates documentation checks from unchanged runtime build
 
 The lightweight job uses only the standard Ubuntu runner, Python's standard library, and actionlint 1.7.12 downloaded from its official release with an exact archive SHA256. It does not claim optional external ShellCheck/Pyflakes results. Current account storage usage is not inferred from one repository's artifact byte count.
 
-## Preview4 observable transport route
+## Preview5 API Accept correction route
 
 The local contract grants no CI event. Exact candidate source/tag/draft staging
-must be approved first. Maximum reservation:six events/240runner-min,338MiB
+must be approved first. Maximum reservation:eight events/320runner-min,450MiB
 total new cache bytes including compressed-envelope overhead. Source CI uses log proofs only.
 No paid override, extra watcher, storage cleanup or duplicate unchanged dispatch.
 Actual current quota/headroom and hosted profile admission are gates.
@@ -108,11 +108,13 @@ After exact restore, aggregation verifies every externally committed byte and
 H1/H2/H3 before copying archive/proof into the unchanged release checks. It never
 promotes local bb406/4abce proof to this new CI source identity.
 
-The authorized technical envelope is at most6 events/240runner-min/338MiB aggregate.
+The authorized technical envelope is at most8 events/320runner-min/450MiB aggregate.
 Each RID archive is at most48MiB and its finite proof bundle at most1MiB.
 The source archive retains the existing at most1MiB cap; staging receipt/SUMS/key reserve is1MiB.
-Source CI uses zero new cache bytes. The failed preview2/preview3 tags retain224MiB of reservations. The new preview4
-tag reserves112MiB: six compressed entries <=336MiB plus2MiB reserve fit338MiB. Raw data remains <=49MiB/
+Source CI uses zero new cache bytes. The failed preview2/preview3/preview4 tags retain336MiB of cumulative reservations,
+including the112MiB unrealized preview4 reservation (actual new cache writes:0).
+The new preview5 tag reserves112MiB: at most eight compressed entries <=448MiB
+plus2MiB reserve fit450MiB. Raw data remains <=49MiB/
 RID (48archive+1proof). Actual entry size is checked from authenticated metadata;
 fresh repository usage and coordinated in-flight reservations remain event gates.
 The configured cache limit remains UNKNOWN and operational availability is not
@@ -206,8 +208,34 @@ deadline/JSON/run/jobs/outputs/handoff/frame/save/cachekey/ref/version/size/
 statewrite failures HOLD without raw exceptions or responses. All original
 source/run/key/ref/save/lookup/restore/archive/H1/H2/H3 guards remain.
 
-The technical envelope is6events/240runner-min/338MiB. Four events/160minutes and
+At preview4, the technical envelope was6events/240runner-min/338MiB. Four events/160minutes and
 four entries/224MiB remain charged/reserved; actual retained cache usage was
 145760489B. New source5 and tag6 reserve40minutes each and the new tag112MiB.
 There is no refund/reset, automatic seventh event, manual contingency, billing
 or settings change. All native/SDK/perphase/sourceZIP limits remain unchanged.
+
+## Preview5 API Accept correction
+
+Preview4 tag43642620238 failed in the pre-native transport readiness probe:
+READINESS_JOB_LOG/HTTP_STATUS415. SDK/native jobs and cache/draft/signing work
+were skipped. Its API log endpoint incorrectly selected binary Accept when a
+redirect was allowed. A paired read of the same endpoint/version/credential
+changed only Accept: octet returned415 and GitHub JSON returned302. This names
+the preview4 header defect; it does not prove a future Actions-token success
+or reconstruct the unknown earlier tag2/tag3 hosted responses.
+
+Every api.github.com GET now uses application/vnd.github+json, including job
+log redirect endpoints. Only the fresh unsigned storage request uses
+application/octet-stream. Authorization remains API-only; cookie, redirect,
+TLS, byte, deadline, diagnostic, source/run/proof and cache guards are unchanged.
+A mocked header-sensitive415 regression and generic415 fail-closed subcase
+cover this change; historical fixtures and the seven release guards are unchanged.
+
+The current technical envelope is8events/320runner-min/450MiB. Six events and
+240minutes remain reserved;336MiB prior cumulative reservations include the
+unused preview4 tag reservation without refund. Actual retained cache remains
+four entries/145760489B. New source7 and tag8 reserve40minutes each; tag8 reserves
+112MiB plus2MiB global margin. Source cache/artifact writes remain0, no automatic
+ninth/manual/rerun is granted and the zero-dollar budget/settings are unchanged.
+The same tag-only readiness must pass using its actual Actions token before
+SDK/native work; source runs skip that token probe.

@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'pouriajamali/fix-session-recovery-harness'
-TAG = 'v0.1.0-preview.4'
+TAG = 'v0.1.0-preview.5'
 PREFIX = 'fix-session-recovery-harness-' + TAG
 ARCHIVES = {PREFIX + '-win-x64.zip', PREFIX + '-linux-x64.tar.gz', PREFIX + '-source.zip'}
 INITIAL = ARCHIVES | {'SHA256SUMS.txt', 'SIGNING-PUBLIC-KEY.pub'}
@@ -160,7 +160,7 @@ def verify_native(path, stage, rid):
     members = archive_members(path)
     manifest = json.loads(members.pop('BUILD-MANIFEST.json'), object_pairs_hook=unique_pairs)
     require(manifest['sourceCommit'] == stage['commit'] and manifest['sourceTree'] == stage['sourceTree'] and
-            manifest['rid'] == rid and manifest['version'] == '0.1.0-preview.4' and
+            manifest['rid'] == rid and manifest['version'] == '0.1.0-preview.5' and
             manifest['selfContained'] and not manifest['localCandidate'] and
             manifest['sdkVersion'] == '10.0.404' and manifest['runtimeVersion'] == '10.0.15', 'Native identity')
     require(set(members) == {f['path'] for f in manifest['files']}, 'Member manifest')

@@ -11,7 +11,7 @@ import check_release as target
 import project08_hosted_proof as proof
 CTX={'schema':'project08-hosted-context-v1','project':'08','commit':'c'*40,'tree':'d'*40,'runId':'222','runAttempt':'1','rid':'linux-x64','os':'Linux','root':str(ROOT)}
 TOKEN='SYNTHETIC_PRIVATE_TOKEN'
-REF='refs/tags/v0.1.0-preview.4'
+REF='refs/tags/v0.1.0-preview.5'
 BASE=target.HTTP_BASE
 META=131072
 class Clock:
@@ -158,7 +158,7 @@ class HTTPTests(SealedTest):
  def test_declared_length_complete(self):
   value,_,path=self.metadata(Reply(body=b'{}'));self.assertEqual(value.json(path),{})
  def test_non200_no_body_or_retry(self):
-  for status in (201,401,403,404,500):
+  for status in (201,401,403,404,415,500):
    with self.subTest(status=status):
     value,backend,path=self.metadata(Reply(status,b'SYNTHETIC_PRIVATE_ERROR_BODY'))
     self.failure(lambda:value.get(path),value.diagnostic,'HTTP_STATUS','HTTP_STATUS',status)
@@ -234,9 +234,19 @@ class HTTPTests(SealedTest):
   return value,backend,path
  def test_one_redirect_no_auth_cookie(self):
   value,backend,path=self.log_reader('https://productionresultssa0.blob.core.windows.net/log?sig=SYNTHETIC_SAS',storage=Reply(body=b'original log'))
+  # Observed API415 regression: log endpoint redirects only for API JSON Accept.
+  location='https://productionresultssa0.blob.core.windows.net/log?sig=SYNTHETIC_SAS'
+  def api_accept_response():
+   if backend.requests[-1][3].get('Accept')!='application/vnd.github+json':
+    return Reply(415,b'SYNTHETIC_PRIVATE_ERROR_BODY')
+   return Reply(302,headers=[('Location',location)])
+  backend.routes[('api.github.com','/'+path)]=api_accept_response
   self.assertEqual(value.get(path,32*1024*1024),b'original log')
   self.assertEqual(value.redirect_calls,1)
+  self.assertEqual(backend.requests[0][3]['Accept'],'application/vnd.github+json')
+  self.assertEqual(backend.requests[1][3]['Accept'],'application/octet-stream')
   self.assertIn('Authorization',backend.requests[0][3])
+  self.assertNotIn('Cookie',backend.requests[0][3])
   self.assertNotIn('Authorization',backend.requests[1][3]);self.assertNotIn('Cookie',backend.requests[1][3])
  def test_redirect_rejects_host_userinfo_port_fragment_scheme_second(self):
   for url in ('http://productionresultssa0.blob.core.windows.net/log','https://evil.example/log','https://u@productionresultssa0.blob.core.windows.net/log','https://productionresultssa0.blob.core.windows.net:444/log','https://productionresultssa100.blob.core.windows.net/log','https://productionresultssa0.blob.core.windows.net/log#x','https://productionresultssa0.blob.core.windows.net/log\n'):
@@ -370,7 +380,7 @@ class ConsumingPathTests(SealedTest):
  def test_readiness_cache_permission_and_typed_usage(self):
   for kind in ('permission','type','limit'):
    routes,_,_,_,path,_=readiness_fixture(self.source)
-   routes[('api.github.com',path)]=Reply(403,b'SYNTHETIC_PRIVATE_BODY') if kind=='permission' else Reply(body=body({'active_caches_size_in_bytes':True if kind=='type' else 338*1024*1024+1,'active_caches_count':4}))
+   routes[('api.github.com',path)]=Reply(403,b'SYNTHETIC_PRIVATE_BODY') if kind=='permission' else Reply(body=body({'active_caches_size_in_bytes':True if kind=='type' else 450*1024*1024+1,'active_caches_count':4}))
    value,_,_=self.readiness(routes)
    self.failure(lambda:target.transport_readiness(proof,CTX,self.source,{'GITHUB_REF':REF,'GITHUB_EVENT_NAME':'push','GITHUB_JOB':'ci_policy'},value),value.diagnostic,'HTTP_STATUS' if kind=='permission' else 'CACHE_SIZE')
  def test_source_and_pr_cli_never_construct_reader_or_read_token(self):

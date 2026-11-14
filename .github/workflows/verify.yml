@@ -39,7 +39,7 @@ jobs:
       - name: Check observable HTTP transport offline
         run: python3 -m unittest discover -s tests -p project08_http_transport_test.py -v
       - name: READ_ONLY_TRANSPORT_PREFLIGHT
-        if: github.ref == 'refs/tags/v0.1.0-preview.4' && github.event_name == 'push'
+        if: github.ref == 'refs/tags/v0.1.0-preview.5' && github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: python3 tools/check_release.py transport transport-readiness
@@ -177,7 +177,7 @@ jobs:
             artifacts/release/SHA256SUMS.txt artifacts/release/SIGNING-PUBLIC-KEY.pub \
             --verify-tag --draft --prerelease --latest=false \
             --title "$RELEASE_TAG — FIX Session Recovery Harness" \
-            --notes-file docs/RELEASE-v0.1.0-preview.4.md
+            --notes-file docs/RELEASE-v0.1.0-preview.5.md
           gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/project08-private-draft.json"
           python tools/check_release.py --directory artifacts/release --commit "$GITHUB_SHA" --tag "$RELEASE_TAG" \
             --stage-input artifacts/draft-stage-input.json --bind-draft "$RUNNER_TEMP/project08-private-draft.json" \

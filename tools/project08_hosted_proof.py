@@ -309,12 +309,12 @@ def observed_sdk(state,ctx,source):
  return value,{'sdk':'10.0.404','runtime':'10.0.15','versionExitCode':0,'runtimeExitCode':0,'terminal':True,'kernelAdmitted':True,'invocations':2}
 
 def archive_name(rid):
- return 'fix-session-recovery-harness-v0.1.0-preview.4-'+rid+('.zip' if rid=='win-x64' else '.tar.gz')
+ return 'fix-session-recovery-harness-v0.1.0-preview.5-'+rid+('.zip' if rid=='win-x64' else '.tar.gz')
 def archive_identity(path,rid):
  assert rid in ('win-x64','linux-x64')
  assert path.name==archive_name(rid) and path.is_file() and not path.is_symlink()
  integer(path.stat().st_size,1,48*1024*1024)
- prefix='fix-session-recovery-harness-v0.1.0-preview.4-'+rid+'/'
+ prefix='fix-session-recovery-harness-v0.1.0-preview.5-'+rid+'/'
  seen=set();folded=set();expanded=0;manifest_bytes=None
  def accept(name,size,regular,read_manifest):
   nonlocal expanded,manifest_bytes
@@ -338,7 +338,7 @@ def archive_identity(path,rid):
  assert manifest_bytes is not None
  manifest=loads(manifest_bytes.decode('utf-8'))
  integer(manifest['schema'],1,1)
- assert manifest['rid']==rid and manifest['version']=='0.1.0-preview.4'
+ assert manifest['rid']==rid and manifest['version']=='0.1.0-preview.5'
  assert manifest['selfContained'] is True and manifest['localCandidate'] is False
  assert manifest['sdkVersion']=='10.0.404' and manifest['runtimeVersion']=='10.0.15'
  assert manifest['originalLicense']=='present' and manifest['buildHost']['os']==('Windows' if rid=='win-x64' else 'Linux')
@@ -359,7 +359,7 @@ def observed_producer(state,root,ctx,source,consumer):
  integer(value['bytes'],1,48*1024*1024);integer(value['payloadFiles'],1,511)
  assert received['commit']==ctx['commit'] and received['sourceTree']==ctx['tree'] and received['rid']==ctx['rid']
  assert consumer['manifestSha256']==received['manifestSha256']
- extracted=state/'consumer/extracted'/('fix-session-recovery-harness-v0.1.0-preview.4-'+ctx['rid'])/'BUILD-MANIFEST.json'
+ extracted=state/'consumer/extracted'/('fix-session-recovery-harness-v0.1.0-preview.5-'+ctx['rid'])/'BUILD-MANIFEST.json'
  assert digest(extracted)==received['manifestSha256']
  return {'phase':'package','commit':ctx['commit'],'sourceTree':ctx['tree'],'rid':ctx['rid'],'terminal':True,'exitCode':0,
   'archive':path.name,**{key:received[key] for key in ('archiveSha256','archiveBytes','manifestSha256','payloadFiles')},
@@ -602,21 +602,21 @@ def affirmative_save(log,expected_key):
  assert sum(line=='Cache saved with key: '+expected_key for line in lines)==1,'Affirmative actual save absent/ambiguous'
  assert sum(line=='Cache found and can be restored from key: '+expected_key for line in lines)==1,'Exact post-save availability absent'
 def cache_entry(value,expected_key,expected_ref):
- assert type(expected_ref) is str and expected_ref=='refs/tags/v0.1.0-preview.4'
+ assert type(expected_ref) is str and expected_ref=='refs/tags/v0.1.0-preview.5'
  # Raw API body remains private; only selected typed fields are used.
  assert type(value) is dict and type(value.get('actions_caches')) is list
  integer(value.get('total_count'),1,8);assert value['total_count']==len(value['actions_caches'])
  rows=[row for row in value['actions_caches'] if type(row) is dict and row.get('key')==expected_key]
  assert len(rows)==1
  row=rows[0];integer(row.get('id'),1,99999999999999999999)
- assert type(row.get('ref')) is str and row['ref'] in ('refs/tags/v0.1.0-preview.4','refs/heads/refs/tags/v0.1.0-preview.4')
+ assert type(row.get('ref')) is str and row['ref'] in ('refs/tags/v0.1.0-preview.5','refs/heads/refs/tags/v0.1.0-preview.5')
  text(row.get('version'),'[0-9a-f]{64}')
  integer(row.get('size_in_bytes'),1,CACHE_ENTRY_LIMIT)
  return row['size_in_bytes']
 def validate_draft_stage(value,commit,tree,run_id):
  closed(value,('schema','repository','tag','commit','sourceTree','workflowRunId','sdk','runtime','reportSchema','nativeProofs','assets','releaseId','stageAssetIds'))
  assert value['schema']=='project08-draft-stage-v1' and value['repository']==TRANSPORT_REPO
- assert value['tag']=='v0.1.0-preview.4' and value['commit']==commit and value['sourceTree']==tree
+ assert value['tag']=='v0.1.0-preview.5' and value['commit']==commit and value['sourceTree']==tree
  integer(value['workflowRunId'],1,99999999999999999999);assert str(value['workflowRunId'])==str(run_id)
  assert value['sdk']=='10.0.404' and value['runtime']=='10.0.15' and value['reportSchema']=='fix-session-harness-report-v2'
  closed(value['nativeProofs'],('win-x64','linux-x64'))
@@ -625,7 +625,7 @@ def validate_draft_stage(value,commit,tree,run_id):
   assert native['commit']==commit and native['outcome']=='pass' and native['fourCases'] is True and native['kernelAdmitted'] is True
   sha(native['receiptSha256']);closed(native['fileHashes'],FACTS)
   for item in native['fileHashes'].values():sha(item)
- names=(archive_name('win-x64'),archive_name('linux-x64'),'fix-session-recovery-harness-v0.1.0-preview.4-source.zip','SHA256SUMS.txt','SIGNING-PUBLIC-KEY.pub')
+ names=(archive_name('win-x64'),archive_name('linux-x64'),'fix-session-recovery-harness-v0.1.0-preview.5-source.zip','SHA256SUMS.txt','SIGNING-PUBLIC-KEY.pub')
  closed(value['assets'],names);closed(value['stageAssetIds'],names)
  ids=[]
  for name,asset in value['assets'].items():

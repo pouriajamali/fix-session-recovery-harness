@@ -16,7 +16,7 @@ def bounded_json(path):
 
 def stage_input(directory,proof_root,commit,tag,run_id,output):
  _stage('INPUT')
- assert tag=='v0.1.0-preview.4' and re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('[0-9a-f]{40}',commit)
+ assert tag=='v0.1.0-preview.5' and re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('[0-9a-f]{40}',commit)
  from project08_hosted_proof import validate_bundle,source_data,archive_identity,archive_name
  _stage('SOURCE')
  source=source_data(*(subprocess.check_output(['git','show',commit+':'+name],cwd=ROOT) for name in
@@ -49,7 +49,7 @@ def bind_draft(stage_path,draft_path,output):
  _stage('DRAFT')
  stage=bounded_json(stage_path);draft=bounded_json(draft_path)
  assert stage['schema']=='project08-draft-stage-v1' and draft['draft'] is True and draft['prerelease'] is True
- assert draft['tag_name']==stage['tag']=='v0.1.0-preview.4'
+ assert draft['tag_name']==stage['tag']=='v0.1.0-preview.5'
  assert len(draft['assets'])==5 and {v['name'] for v in draft['assets']}==set(stage['assets'])
  assert len({v['id'] for v in draft['assets']})==5
  for item in draft['assets']:
@@ -254,7 +254,7 @@ class TransportHTTP:
   if api:
    if host!='api.github.com':d.hold('INPUT')
   elif not re.fullmatch(r'productionresultssa[0-9]{1,2}\.blob\.core\.windows\.net',host):d.hold('REDIRECT')
-  headers={'Accept':'application/vnd.github+json' if api and not can_redirect else 'application/octet-stream','User-Agent':'project08-fixed-actions-reader'}
+  headers={'Accept':'application/vnd.github+json' if api else 'application/octet-stream','User-Agent':'project08-fixed-actions-reader'}
   if api:headers.update(Authorization='Bearer '+self.token,**{'X-GitHub-Api-Version':'2026-03-10'})
   try:
    connection=self._connection(host,self._remaining());connection.connect();wire=connection.sock
@@ -337,7 +337,7 @@ class TransportHTTP:
 
 def _checked_cache_entry(proof,value,expected_key,expected_ref):
  _stage('CACHE_REF')
- assert type(expected_ref) is str and expected_ref=='refs/tags/v0.1.0-preview.4'
+ assert type(expected_ref) is str and expected_ref=='refs/tags/v0.1.0-preview.5'
  _stage('CACHE_KEY')
  assert type(value) is dict and type(value.get('actions_caches')) is list
  proof.integer(value.get('total_count'),1,8);assert value['total_count']==len(value['actions_caches'])
@@ -345,7 +345,7 @@ def _checked_cache_entry(proof,value,expected_key,expected_ref):
  assert len(rows)==1
  row=rows[0];proof.integer(row.get('id'),1,99999999999999999999)
  _stage('CACHE_REF')
- assert type(row.get('ref')) is str and row['ref'] in ('refs/tags/v0.1.0-preview.4','refs/heads/refs/tags/v0.1.0-preview.4')
+ assert type(row.get('ref')) is str and row['ref'] in ('refs/tags/v0.1.0-preview.5','refs/heads/refs/tags/v0.1.0-preview.5')
  _stage('CACHE_VERSION');proof.text(row.get('version'),'[0-9a-f]{64}')
  _stage('CACHE_SIZE');proof.integer(row.get('size_in_bytes'),1,proof.CACHE_ENTRY_LIMIT)
  return proof.cache_entry(value,expected_key,expected_ref)
@@ -353,7 +353,7 @@ def _checked_cache_entry(proof,value,expected_key,expected_ref):
 def transport_readiness(proof,ctx,source,environment,reader):
  with _using_diagnostic(reader.diagnostic):
   _stage('READINESS')
-  if environment.get('GITHUB_REF')!='refs/tags/v0.1.0-preview.4' or environment.get('GITHUB_EVENT_NAME')!='push':return False
+  if environment.get('GITHUB_REF')!='refs/tags/v0.1.0-preview.5' or environment.get('GITHUB_EVENT_NAME')!='push':return False
   assert environment.get('GITHUB_JOB')=='ci_policy'
   runs=reader.json(HTTP_BASE+'workflows/verify.yml/runs?branch=main&event=push&status=success&head_sha='+ctx['commit']+'&per_page=20')
   _stage('RUN');assert type(runs) is dict and type(runs.get('workflow_runs')) is list
@@ -382,8 +382,8 @@ def transport_readiness(proof,ctx,source,environment,reader):
   _stage('LOG_FRAME');proof.recovered_native_log(log,context,source)
   usage=reader.json(HTTP_BASE+'cache/usage')
   _stage('CACHE_SIZE');assert type(usage) is dict
-  proof.integer(usage.get('active_caches_size_in_bytes'),0,338*1024*1024)
-  proof.integer(usage.get('active_caches_count'),0,6)
+  proof.integer(usage.get('active_caches_size_in_bytes'),0,450*1024*1024)
+  proof.integer(usage.get('active_caches_count'),0,8)
   reader.diagnostic.check();_stage('DONE');return True
 
 def expect_carriers(proof,ctx,source,environment,private,output,reader):
@@ -415,7 +415,7 @@ def expect_carriers(proof,ctx,source,environment,private,output,reader):
    cache=reader.json(HTTP_BASE+'caches?key='+key+'&per_page=100')
    size=_checked_cache_entry(proof,cache,key,environment['GITHUB_REF']);compressed.append(size)
    entries.append((rid,value,key,size))
-  _stage('CACHE_SIZE');assert sum(compressed)<=2*proof.CACHE_ENTRY_LIMIT and 6*proof.CACHE_ENTRY_LIMIT<=338*1024*1024
+  _stage('CACHE_SIZE');assert sum(compressed)<=2*proof.CACHE_ENTRY_LIMIT and 8*proof.CACHE_ENTRY_LIMIT<=450*1024*1024
   _stage('STATE_WRITE')
   for rid,value,key,size in entries:
    path=private/(rid+'.json')
@@ -439,7 +439,7 @@ def transport_main(arguments):
  assert os.environ['GITHUB_RUN_ATTEMPT']=='1'
  source=proof.source_at_root(ROOT)
  if operation=='transport-readiness':
-  if os.environ.get('GITHUB_REF')!='refs/tags/v0.1.0-preview.4' or os.environ.get('GITHUB_EVENT_NAME')!='push':return
+  if os.environ.get('GITHUB_REF')!='refs/tags/v0.1.0-preview.5' or os.environ.get('GITHUB_EVENT_NAME')!='push':return
   assert os.environ['GITHUB_JOB']=='ci_policy'
   diagnostic=_ACTIVE_DIAGNOSTIC or TransportDiagnostic('READ_ONLY_TRANSPORT_PREFLIGHT',ctx)
   reader=TransportHTTP(ctx,os.environ.get('GH_TOKEN'),diagnostic,'readiness')
