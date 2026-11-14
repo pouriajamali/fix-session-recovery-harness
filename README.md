@@ -97,7 +97,11 @@ approved phase, owned E outputs, canonical lane and actual Job/cgroup limits; no
 uncapped fallback or direct SDK probe/bootstrap is supported. Windows256processes
 and Linux256tasks are different limits, not an equal thread-cap claim.
 
-After admission, use the fixed launcher phases; the equivalent bounded source commands are:
+Private local qualification uses its separately admitted fixed launcher.
+Hosted qualification uses `tools/project08_hosted.py`, the SDK404 archive/member
+pins and a fresh actual matching-OS Job/cgroup proof; it does not reuse a local
+workspace admission or SDK11. Source/CI authorization is a separate gate.
+The equivalent bounded source commands inside an admitted phase are:
 
 ```sh
 # Example inside the admitted phase: linux-x64; use win-x64 on Windows.
@@ -163,3 +167,21 @@ The test-only NewSeqNo4 variant must finish barriers/logout and produce a
 completed semantic failure/exit2. Timeout, bad frame or child/protocol failure is
 incomplete/exit1 and cannot pass that negative test. No negative fixture option is
 available in the consumer CLI. Source preparation alone proves none of these results.
+
+Hosted proof acceptance requires the complete fixed 74 test observations and
+13 own package consumer checks, plus the complete seven-test offline release
+suite. Only the named Windows symlink privilege case may skip. Producer and
+release aggregation validate closed finite schemas, attempt1/source/OS/RID,
+same-commit SDK404 member/source pins, observed capped SDK404/runtime15 results,
+and actual package archive/manifest byte identities. Public finite observations
+are separate from nonce-salted commitments to private source evidence; those
+commitments are not inspectable SDK input or independent execution proof.
+
+Source CI exports the six finite native-proof files through bounded framed logs,
+with no artifact or cache writes. Tag/manual transport uses only an exact
+same-run cache handoff; its expected digest and file hashes come from trusted
+producer outputs outside the cache. Aggregation requires authenticated actual
+save evidence, exact availability/key outputs and actual archive/proof byte
+bindings before draft staging. DRAFT-STAGE is a typed finite log frame. No SDK or
+execution result is reused from cache. The configured cache limit is UNKNOWN;
+availability and the <=226MiB envelope remain actual-event gates.

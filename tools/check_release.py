@@ -1,6 +1,6 @@
 # Adapted from Pouria Jamali's public MIT sqlite-recovery-drill (003b700d); see NOTICE.md.
 """Check exact already-tested runtime archives; source packaging only, no binary rebuild."""
-import argparse,hashlib,json,subprocess,tarfile,zipfile
+import argparse,hashlib,json,re,subprocess,tarfile,zipfile
 from pathlib import Path,PurePosixPath
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -15,46 +15,16 @@ def bounded_json(path):
  return json.loads(path.read_text(encoding='utf-8-sig'),object_pairs_hook=pairs)
 
 def stage_input(directory,proof_root,commit,tag,run_id,output):
- assert tag=='v0.1.0-preview.2' and run_id.isdigit()
+ assert tag=='v0.1.0-preview.2' and re.fullmatch('[1-9][0-9]{0,19}',run_id) and re.fullmatch('[0-9a-f]{40}',commit)
+ from project08_hosted_proof import validate_bundle,source_data,archive_identity,archive_name
+ source=source_data(*(subprocess.check_output(['git','show',commit+':'+name],cwd=ROOT) for name in
+  ('tools/project08-hosted-profile.json','tools/project08_hosted.py','tools/project08-sdk404-members.jsonl','tools/package.py')))
+ tree=subprocess.check_output(['git','rev-parse',commit+'^{tree}'],cwd=ROOT,text=True).strip()
  native={}
  for rid in ('win-x64','linux-x64'):
-  path=proof_root/rid/'native-proof.json';proof=bounded_json(path)
-  assert proof['schema']=='project08-native-proof-v1' and proof['commit']==commit and proof['rid']==rid
-  assert str(proof['workflowRunId'])==run_id,'Proof belongs to another CI run'
-  assert proof['sdk']=='10.0.404' and proof['runtime']=='10.0.15' and proof['outcome']=='pass'
-  assert proof['fourCases'] is True and proof['kernelAdmitted'] is True and proof['terminal'] is True
-  # Native owner seals these concrete proof files after actual admitted execution.
-  required={'tests','consumer','kernel','subprocessMembership','terminal'}
-  assert set(proof['files'])==required
-  for item in proof['files'].values():
-   relative=PurePosixPath(item['path'])
-   assert not relative.is_absolute() and '..' not in relative.parts
-   actual=path.parent/item['path'];assert actual.is_file() and not actual.is_symlink()
-   assert hashlib.sha256(actual.read_bytes()).hexdigest()==item['sha256']
-  tests=bounded_json(path.parent/proof['files']['tests']['path'])
-  consumer=bounded_json(path.parent/proof['files']['consumer']['path'])
-  assert tests['failed']==0 and tests['passed']>0
-  observations={v['name']:v['result'] for v in tests['observations']}
-  assert all(observations.get(name)=='pass' for name in (
-   'all-four-real-loopback-scenarios-and-raw-hashes','gapfill-wrong-newseqno-is-completed-fail2',
-   'strict-process-diagnostic-bindings-and-nullable-exit','process-sidecar-collision-preserves-original-cause'))
-  assert consumer['commit']==commit and consumer['rid']==rid and consumer['status']=='ACTUAL_SELF_CONTAINED_FIXED_FIX_HARNESS_PACKAGE_PASS'
-  assert all('actual-scenario-'+name in consumer['checks'] for name in ('gap','resend','restart','gapfill'))
-  terminal=bounded_json(path.parent/proof['files']['terminal']['path'])
-  member=bounded_json(path.parent/proof['files']['subprocessMembership']['path'])
-  assert terminal['terminal'] is True and terminal['exitCode']==0 and terminal['project']=='08'
-  assert member['member'] is True and member['nonce']==terminal['nonce'] and member['project']=='08'
-  assert member['pid']==consumer['consumerPid'],'Consumer/subprocess binding'
-  kernel=bounded_json(path.parent/proof['files']['kernel']['path'])
-  if rid=='win-x64':
-   assert kernel['mechanism']=='windows-job' and member['mechanism']=='windows-job'
-   assert kernel['job']==member['job'] and kernel['memoryBytes']==2147483648 and kernel['processLimit']==256
-   assert int(kernel['cpuAffinity']).bit_count()==2 and kernel['threadLimitClaim'] is False
-  else:
-   assert kernel['mechanism']=='cgroup-v2' and kernel['membership']==member['membership']
-   values=kernel['limits'];quota,period=values['cpu.max'].split()
-   assert quota!='max' and int(quota)<=2*int(period) and int(values['memory.max'])<=2147483648
-   assert values['memory.swap.max']=='0' and int(values['pids.max'])<=256
+  path=proof_root/rid/'native-proof.json'
+  received=archive_identity(directory/archive_name(rid),rid)
+  proof=validate_bundle(path.parent,commit,tree,run_id,rid,source,received)
   native[rid]={'commit':commit,'outcome':'pass','fourCases':True,'kernelAdmitted':True,
                'receiptSha256':hashlib.sha256(path.read_bytes()).hexdigest(),
                'fileHashes':{key:item['sha256'] for key,item in proof['files'].items()}}
@@ -117,6 +87,7 @@ def main():
  assert len(trees)==1
  source=a.directory/f'fix-session-recovery-harness-{a.tag}-source.zip';assert not source.exists()
  subprocess.run(['git','-C',str(ROOT),'-c','core.autocrlf=false','-c','core.eol=lf','archive','--format=zip',f'--prefix=fix-session-recovery-harness-{a.tag}-source/','--output='+str(source.resolve()),a.commit],check=True)
+ assert source.stat().st_size<=1024*1024,'existing source archive<=1MiB'
  with zipfile.ZipFile(source) as z:
   names=subprocess.check_output(['git','-C',str(ROOT),'ls-tree','-r','--name-only',a.commit],text=True).splitlines();prefix=f'fix-session-recovery-harness-{a.tag}-source/'
   assert {i.filename for i in z.infolist() if not i.is_dir()}=={prefix+n for n in names}
@@ -127,4 +98,142 @@ def main():
   assert a.proof_root and a.run_id
   stage_input(a.directory,a.proof_root,a.commit,a.tag,a.run_id,a.stage_receipt)
  print(json.dumps({'status':'ALREADY_TESTED_RUNTIME_ARCHIVES_AND_EXACT_SOURCE_VERIFIED','archives':receipts,'sourceFiles':len(names)}))
-if __name__=='__main__':main()
+
+
+# Fixed carrier commands: only data, current-run read APIs and owned file handoffs.
+def transport_main(arguments):
+ import os,shutil,sys,tempfile,time
+ import project08_hosted_proof as proof
+ parser=argparse.ArgumentParser()
+ parser.add_argument('operation',choices=('native-log','prepare-carrier','producer-available','tools','expect-carriers','accept-carrier','draft-log'))
+ parser.add_argument('--rid',choices=('win-x64','linux-x64'));args=parser.parse_args(arguments)
+ operation=args.operation
+ from project08_hosted import context
+ profile,ctx,state=context()
+ assert os.environ.get('RUNNER_DEBUG')!='1'
+ assert os.environ['GITHUB_RUN_ATTEMPT']=='1'
+ source=proof.source_at_root(ROOT)
+ def lc(rid,job='verify'):return proof.log_context(ctx['commit'],ctx['tree'],ctx['runId'],rid,job)
+ def output(name,value):
+  assert re.fullmatch('(win|linux)_(commitment|key|available)',name) and type(value) is str and len(value)<=8192
+  assert all(32<=ord(char)<127 for char in value)
+  with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8',newline='\n') as stream:stream.write(name+'='+value+'\n')
+ def prefix(rid):return 'win' if rid=='win-x64' else 'linux'
+ def carrier(rid):return proof.carrier_directory(ROOT,rid)
+ def private_root():return Path(os.environ['RUNNER_TEMP'])/('project08-transport-'+ctx['runId'])
+ def data_event():
+  assert os.environ['GITHUB_EVENT_NAME']=='workflow_dispatch' or os.environ['GITHUB_REF'].startswith('refs/tags/')
+ def exact_triplet(key):
+  proof.exact_cache_outputs(os.environ['CACHE_HIT'],os.environ['CACHE_PRIMARY'],os.environ['CACHE_MATCHED'],key)
+ def write_private(path,value):
+  path.parent.mkdir(parents=True,exist_ok=True)
+  with path.open('xb') as stream:stream.write(proof.canonical(value))
+ def gh_private(endpoint,limit):
+  # gh follows GitHub's log redirect privately; no API/SAS/error body reaches stdout.
+  assert os.environ.get('GH_TOKEN') and endpoint.startswith('repos/'+proof.TRANSPORT_REPO+'/actions/')
+  assert '\n' not in endpoint and len(endpoint)<1024
+  with tempfile.TemporaryDirectory(prefix='project08-api-',dir=os.environ['RUNNER_TEMP']) as temporary:
+   out=Path(temporary)/'body';err=Path(temporary)/'error'
+   with out.open('xb') as stdout,err.open('xb') as stderr:
+    child=subprocess.Popen(['gh','api','--hostname','github.com',endpoint],cwd=ROOT,
+     env=dict(os.environ,GH_HOST='github.com'),stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr)
+    deadline=time.monotonic()+60
+    try:
+     while child.poll() is None:
+      assert time.monotonic()<deadline and out.stat().st_size<=limit and err.stat().st_size<=131072
+      time.sleep(0.05)
+     assert child.returncode==0 and out.stat().st_size<=limit and err.stat().st_size<=131072
+    finally:
+     if child.poll() is None:child.kill();child.wait(timeout=3)
+   return out.read_bytes()
+ if operation=='tools':
+  for rid in ('win-x64','linux-x64'):assert not carrier(rid).exists()
+  # Action cache v6 crossOS uses GNU tar and zstd. No install or fallback.
+  tar=str(Path(os.environ.get('ProgramFiles',r'C:\Program Files'))/'Git/usr/bin/tar.exe') if os.name=='nt' else shutil.which('tar')
+  assert tar and Path(tar).is_file() and shutil.which('zstd')
+  for command,word in (([tar,'--version'],b'GNU tar'),(['zstd','--quiet','--version'],None)):
+   result=subprocess.run(command,stdin=subprocess.DEVNULL,capture_output=True,timeout=10)
+   assert result.returncode==0 and len(result.stdout)+len(result.stderr)<=4096
+   if word:assert word in result.stdout
+   else:assert result.stdout.strip()
+  return
+ if operation in ('native-log','prepare-carrier','producer-available'):
+  assert os.environ['GITHUB_JOB']=='verify'
+  rid=ctx['rid'];context=lc(rid);directory=ROOT/'artifacts/native-proofs'/rid
+  archive=ROOT/'artifacts/delivery'/proof.archive_name(rid)
+  received=proof.archive_identity(archive,rid);files=proof.proof_bytes(directory)
+  proof.validate_proof_bytes(files,context,source,received)
+  if operation=='native-log':
+   sys.stdout.buffer.write(proof.native_log(files,context,source,received));return
+  data_event();value=proof.handoff(files,archive,context);key=proof.handoff_key(value,context)
+  if operation=='prepare-carrier':
+   path=carrier(rid)
+   assert not path.exists() and not path.is_symlink()
+   path.mkdir(parents=True,exist_ok=False)
+   for name,data in ((archive.name,archive.read_bytes()),*files.items()):
+    with (path/name).open('xb') as stream:stream.write(data)
+   proof.validate_carrier(path,value,context,source)
+   output(prefix(rid)+'_commitment',proof.encode_handoff(value));output(prefix(rid)+'_key',key)
+   return
+  assert os.environ['CACHE_SAVE_OUTCOME']=='success'
+  exact_triplet(key)
+  # Availability is affirmative; actual save is independently verified in producer log before draft.
+  output(prefix(rid)+'_available','true');return
+ assert os.environ['GITHUB_JOB']=='release'
+ data_event()
+ if operation=='expect-carriers':
+  assert not private_root().exists();private_root().mkdir()
+  jobs=proof.loads(gh_private('repos/'+proof.TRANSPORT_REPO+'/actions/runs/'+ctx['runId']+'/attempts/1/jobs?per_page=100',131072).decode('utf-8'))
+  assert type(jobs) is dict and type(jobs.get('jobs')) is list
+  proof.integer(jobs.get('total_count'),1,8);assert jobs['total_count']==len(jobs['jobs'])
+  entries=[];compressed=[]
+  for rid in ('win-x64','linux-x64'):
+   p=prefix(rid);context=lc(rid)
+   assert os.environ[p.upper()+'_AVAILABLE']=='true'
+   value=proof.decode_handoff(os.environ[p.upper()+'_COMMITMENT'],context);key=proof.handoff_key(value,context)
+   rows=[job for job in jobs['jobs'] if job.get('name')==context['jobName']]
+   assert len(rows)==1;job=rows[0]
+   proof.integer(job.get('id'),1,99999999999999999999)
+   proof.integer(job.get('run_id'),1,99999999999999999999)
+   assert str(job['run_id'])==ctx['runId'] and type(job.get('run_attempt')) is int and job['run_attempt']==1
+   assert job.get('head_sha')==ctx['commit'] and job.get('status')=='completed' and job.get('conclusion')=='success'
+   # Bind actual save line and complete finite proof to this authenticated exact job.
+   log=gh_private('repos/'+proof.TRANSPORT_REPO+'/actions/jobs/'+str(job['id'])+'/logs',proof.JOB_LOG_LIMIT)
+   proof.affirmative_save(log,key);files=proof.recovered_native_log(log,context,source)
+   for row in value['files'][1:]:
+    assert len(files[row['name']])==row['bytes'] and hashlib.sha256(files[row['name']]).hexdigest()==row['sha256']
+   cache=proof.loads(gh_private('repos/'+proof.TRANSPORT_REPO+'/actions/caches?key='+key+'&per_page=100',131072).decode('utf-8'))
+   size=proof.cache_entry(cache,key,os.environ['GITHUB_REF']);compressed.append(size)
+   entries.append((rid,value,key,size))
+  assert sum(compressed)<=2*proof.CACHE_ENTRY_LIMIT and 4*proof.CACHE_ENTRY_LIMIT<=226*1024*1024
+  for rid,value,key,size in entries:
+   write_private(private_root()/(rid+'.json'),{'context':lc(rid),'expected':value,'key':key,'actualSaveVerified':True,'cacheBytes':size})
+   output(prefix(rid)+'_key',key)
+  return
+ if operation=='accept-carrier':
+  assert args.rid
+  rid=args.rid;context=lc(rid)
+  private=proof.read(private_root()/(rid+'.json'))
+  proof.closed(private,('context','expected','key','actualSaveVerified','cacheBytes'))
+  assert private['context']==context and private['actualSaveVerified'] is True
+  proof.integer(private['cacheBytes'],1,proof.CACHE_ENTRY_LIMIT)
+  key=proof.handoff_key(private['expected'],context);assert key==private['key'];exact_triplet(key)
+  files,received=proof.validate_carrier(carrier(rid),private['expected'],context,source)
+  directory=ROOT/'artifacts/native-proofs'/rid;assert not directory.exists();directory.mkdir(parents=True)
+  for name,data in files.items():
+   with (directory/name).open('xb') as stream:stream.write(data)
+  destination=ROOT/'artifacts/release';destination.mkdir(parents=True,exist_ok=True)
+  with (destination/proof.archive_name(rid)).open('xb') as stream:stream.write((carrier(rid)/proof.archive_name(rid)).read_bytes())
+  return
+ assert operation=='draft-log'
+ path=ROOT/'artifacts/DRAFT-STAGE.json'
+ value=proof.read(path)
+ sys.stdout.buffer.write(proof.draft_log(value,lc('both','release')))
+
+if __name__=='__main__':
+ import sys
+ try:
+  if len(sys.argv)>1 and sys.argv[1]=='transport':transport_main(sys.argv[2:])
+  else:main()
+ except Exception:
+  print('PROJECT08_DATA_OR_TRANSPORT_HOLD',file=sys.stderr);sys.exit(1)

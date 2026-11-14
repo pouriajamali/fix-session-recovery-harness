@@ -11,8 +11,6 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
   DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
 concurrency:
-  # Main, tag and manual runs never share a pending/cancelling group.
-  # A PR uses its complete merge-base delta, so its newer run includes earlier source changes.
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('run-{0}', github.run_id) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -38,8 +36,14 @@ jobs:
       - name: Check actual workflow syntax and expressions
         run: python3 .github/ci/policy.py lint
   verify:
+    name: Native ${{ matrix.rid }}
     needs: ci_policy
     if: needs.ci_policy.outputs.native == 'true'
+    outputs:
+      win_commitment: ${{ steps.prepare.outputs.win_commitment }}
+      linux_commitment: ${{ steps.prepare.outputs.linux_commitment }}
+      win_available: ${{ steps.confirmed.outputs.win_available }}
+      linux_available: ${{ steps.confirmed.outputs.linux_available }}
     strategy:
       max-parallel: 1
       matrix:
@@ -52,83 +56,101 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      # Hosted input/profile binding is supplied only after the exact source/CI gate.
-      # Local E admission cannot qualify a fresh hosted runner.
-      - name: Require actual project08 hosted kernel admission before SDK actions
-        shell: pwsh
-        run: |
-          $receipt = Join-Path $env:RUNNER_TEMP 'project08-hosted-admission.json'
-          if (!(Test-Path -LiteralPath $receipt)) { throw 'HOLD: exact hosted project08 input/profile admission is not bound' }
-          $r = Get-Content -Raw -LiteralPath $receipt | ConvertFrom-Json
-          if ($r.project -ne '08' -or $r.status -ne 'ADMITTED' -or $r.candidate -ne '${{ github.sha }}') { throw 'Hosted admission identity mismatch' }
-          throw 'HOLD: hosted membership adapter must be bound at exact source/CI gate; no uncapped SDK fallback'
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.0.404'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Locked regressions and real owned loopback cases
-        shell: pwsh
-        run: |
-          dotnet restore tests/SessionHarness.Tests --locked-mode
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          dotnet run --project tests/SessionHarness.Tests -c Release --no-restore -- --work artifacts/tests
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Build clean exact-commit distributable
-        run: python tools/package.py --rid ${{ matrix.rid }} --commit ${{ github.sha }} --work artifacts/build --out artifacts/delivery
-      - name: Extract the actual archive
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path 'artifacts/extracted with spaces' -ErrorAction Stop | Out-Null
-          $archive = Get-ChildItem -LiteralPath artifacts/delivery -File
-          if (@($archive).Count -ne 1) { throw 'Exactly one archive expected' }
-          if ($IsWindows) { Expand-Archive -LiteralPath $archive.FullName -DestinationPath 'artifacts/extracted with spaces' }
-          else { tar -xzf $archive.FullName -C 'artifacts/extracted with spaces'; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
-      - name: Execute own extracted apphost with fixed synthetic loopback
-        shell: pwsh
-        run: |
-          $package = Get-ChildItem -LiteralPath 'artifacts/extracted with spaces' -Directory
-          if (@($package).Count -ne 1) { throw 'Exactly one package root expected' }
-          python tools/check_package.py --package $package.FullName --work 'artifacts/package checks with spaces' --commit '${{ github.sha }}'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
+      - name: Fresh hosted SDK404 and exact native source qualification
+        run: python tools/project08_hosted.py
+      - name: Emit complete finite native proof
+        run: python tools/check_release.py transport native-log
+      - name: Verify crossOS carrier tools
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        run: python tools/check_release.py transport tools
+      - name: Prepare externally committed fixed handoff
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        id: prepare
+        run: python tools/check_release.py transport prepare-carrier
+      - name: Save fixed current-run handoff
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        id: save
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          retention-days: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && 7 || 3 }}
-          name: tested-${{ matrix.rid }}
-          path: artifacts/delivery/*
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+          path: artifacts/project08-handoff/${{ matrix.rid }}
+          key: ${{ steps.prepare.outputs.win_key || steps.prepare.outputs.linux_key }}
+          enableCrossOsArchive: true
+      - name: Confirm exact current-run entry exists
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        id: available
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          retention-days: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && 7 || 3 }}
-          name: proof-${{ matrix.rid }}
-          path: |
-            artifacts/tests/receipt.json
-            artifacts/build/archive.json
-            artifacts/package checks with spaces/receipt.json
-          if-no-files-found: error
+          path: artifacts/project08-handoff/${{ matrix.rid }}
+          key: ${{ steps.prepare.outputs.win_key || steps.prepare.outputs.linux_key }}
+          enableCrossOsArchive: true
+          lookup-only: true
+          fail-on-cache-miss: true
+      - name: Validate exact availability outputs
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        id: confirmed
+        env:
+          CACHE_SAVE_OUTCOME: ${{ steps.save.outcome }}
+          CACHE_HIT: ${{ steps.available.outputs.cache-hit }}
+          CACHE_PRIMARY: ${{ steps.available.outputs.cache-primary-key }}
+          CACHE_MATCHED: ${{ steps.available.outputs.cache-matched-key }}
+        run: python tools/check_release.py transport producer-available
   release:
+    name: Release aggregate
     if: startsWith(github.ref, 'refs/tags/v')
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
+      # Read only this run's completed producer logs/cache metadata before restoration.
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: actions/download-artifact@v4
+      - name: Verify tools and empty isolated carrier destinations
+        run: python tools/check_release.py transport tools
+      - name: Verify trusted producer commitments and affirmative actual saves
+        id: expected
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WIN_COMMITMENT: ${{ needs.verify.outputs.win_commitment }}
+          LINUX_COMMITMENT: ${{ needs.verify.outputs.linux_commitment }}
+          WIN_AVAILABLE: ${{ needs.verify.outputs.win_available }}
+          LINUX_AVAILABLE: ${{ needs.verify.outputs.linux_available }}
+        run: python tools/check_release.py transport expect-carriers
+      - name: Restore exact Windows producer handoff
+        id: win
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          pattern: tested-*
-          merge-multiple: true
-          path: artifacts/release
-      - uses: actions/download-artifact@v4
+          path: artifacts/project08-handoff/win-x64
+          key: ${{ steps.expected.outputs.win_key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Validate externally committed Windows bytes
+        env:
+          CACHE_HIT: ${{ steps.win.outputs.cache-hit }}
+          CACHE_PRIMARY: ${{ steps.win.outputs.cache-primary-key }}
+          CACHE_MATCHED: ${{ steps.win.outputs.cache-matched-key }}
+        run: python tools/check_release.py transport accept-carrier --rid win-x64
+      - name: Restore exact Linux producer handoff
+        id: linux
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
-          pattern: proof-*
-          path: artifacts/native-proofs
+          path: artifacts/project08-handoff/linux-x64
+          key: ${{ steps.expected.outputs.linux_key }}
+          enableCrossOsArchive: true
+          fail-on-cache-miss: true
+      - name: Validate externally committed Linux bytes
+        env:
+          CACHE_HIT: ${{ steps.linux.outputs.cache-hit }}
+          CACHE_PRIMARY: ${{ steps.linux.outputs.cache-primary-key }}
+          CACHE_MATCHED: ${{ steps.linux.outputs.cache-matched-key }}
+        run: python tools/check_release.py transport accept-carrier --rid linux-x64
       - name: Verify already-executed archives and exact source
         env:
           SOURCE_SHA: ${{ github.sha }}
@@ -148,13 +170,9 @@ jobs:
             --verify-tag --draft --prerelease --latest=false \
             --title "$RELEASE_TAG — FIX Session Recovery Harness" \
             --notes-file docs/RELEASE-v0.1.0-preview.2.md
-          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > artifacts/actual-draft.json
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/project08-private-draft.json"
           python tools/check_release.py --directory artifacts/release --commit "$GITHUB_SHA" --tag "$RELEASE_TAG" \
-            --stage-input artifacts/draft-stage-input.json --bind-draft artifacts/actual-draft.json \
+            --stage-input artifacts/draft-stage-input.json --bind-draft "$RUNNER_TEMP/project08-private-draft.json" \
             --stage-receipt artifacts/DRAFT-STAGE.json
-      - uses: actions/upload-artifact@v4
-        with:
-          name: project08-draft-stage
-          path: artifacts/DRAFT-STAGE.json
-          retention-days: 7
-          if-no-files-found: error
+      - name: Emit typed finite draft receipt only
+        run: python tools/check_release.py transport draft-log

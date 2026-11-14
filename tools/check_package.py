@@ -2,6 +2,11 @@
 from pathlib import Path
 import argparse,hashlib,json,os,subprocess
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def run_checked(command,**kwargs):
+ if os.environ.get('GITHUB_ACTIONS')=='true':
+  from project08_hosted import checked_run
+  return checked_run(command,**kwargs)
+ return subprocess.run(command,**kwargs)
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--package',type=Path,required=True);parser.add_argument('--work',type=Path,required=True);parser.add_argument('--commit',required=True);parser.add_argument('--local-candidate',action='store_true');a=parser.parse_args()
  package=a.package.resolve();work=a.work.resolve();work.mkdir(parents=True,exist_ok=False);m=json.loads((package/'BUILD-MANIFEST.json').read_text(encoding='utf-8'))
@@ -21,7 +26,7 @@ def main():
  checks=['package-manifest-dictionary-licenses-and-document-links'];exe=package/('session-harness.exe' if os.name=='nt' else 'session-harness')
  env=dict(os.environ,DOTNET_ROOT=str(work/'no-installed-dotnet'),DOTNET_ROOT_X64=str(work/'no-installed-dotnet'),DOTNET_MULTILEVEL_LOOKUP='0')
  def run(name,args,code):
-  p=subprocess.run([str(exe),*map(str,args)],cwd=work,env=env,capture_output=True,text=True,encoding='utf-8',timeout=90)
+  p=run_checked([str(exe),*map(str,args)],cwd=work,env=env,capture_output=True,text=True,encoding='utf-8',timeout=90)
   (work/(name+'.json')).write_text(json.dumps({'exit':p.returncode,'stdout':p.stdout,'stderr':p.stderr,'command':[str(exe),*map(str,args)]},indent=2)+'\n',encoding='utf-8')
   assert p.returncode==code and not p.stderr,(name,p.returncode,p.stderr);checks.append(name);return p.stdout
  assert m['version'] in run('version',['--version'],0)

@@ -158,6 +158,12 @@ def validate_package_member(package, member, sealed_test_lock):
   guard(lock.get('version')==1 and isinstance(lock.get('dependencies'),dict),'Test lock must be JSON lock data')
  return relative
 
+def publish_checked(command, log):
+ if os.environ.get('GITHUB_ACTIONS')=='true':
+  from project08_hosted import checked_run
+  return checked_run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=210)
+ return subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=210)
+
 def main():
  p=argparse.ArgumentParser();p.add_argument('--rid',choices=['win-x64','linux-x64'],required=True);p.add_argument('--commit',required=True);p.add_argument('--work',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--dotnet',default='dotnet');p.add_argument('--source',action='append');p.add_argument('--local-candidate',action='store_true');p.add_argument('--write-runtime-pins',action='store_true');a=p.parse_args()
  assets=json.loads((ROOT/'src/SessionHarness/obj/project.assets.json').read_text(encoding='utf-8')) if a.write_runtime_pins else None
@@ -181,7 +187,7 @@ def main():
  if a.source:
   for source in a.source:command+=['--source',source]
  # Audit remains enabled even with an explicitly admitted feed.
- with (work/'publish.log').open('wb') as log:subprocess.run(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,check=True,timeout=210)
+ with (work/'publish.log').open('wb') as log:publish_checked(command,log)
  validate_rid_outputs(a.rid)
  assert not git('status','--porcelain'),'Build modified source'
  name=f'fix-session-recovery-harness-v{version}-{a.rid}';package=work/name;shutil.copytree(published,package)

@@ -1,0 +1,87 @@
+{
+  "schema": "project08-hosted-profile-v1",
+  "project": "08",
+  "repository": "pouriajamali/fix-session-recovery-harness",
+  "sdk": "10.0.404",
+  "runtime": "10.0.15",
+  "tfm": "net10.0",
+  "nativeTotalSeconds": 900,
+  "memoryBytes": 2147483648,
+  "cpuCount": 2,
+  "windowsProcessLimit": 256,
+  "linuxTaskLimit": 256,
+  "linuxSwapBytes": 0,
+  "phases": {
+    "materialize": 180,
+    "qualify": 30,
+    "restore": 90,
+    "build": 90,
+    "tests": 165,
+    "package": 210,
+    "consumer": 120
+  },
+  "memberManifest": "tools/project08-sdk404-members.jsonl",
+  "memberManifestSha256": "1c34bc1465bfa261878db2d9b10d1a2f0a18ad0ea95f3b6acedb92e23eda52c1",
+  "accepted06InventorySha256": "dbac0e467b75f6b6ac5a5a2d8eba5561cd97dda287a9044f2555fc43ebe3187d",
+  "officialMetadata": "https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json",
+  "inputs": {
+    "win-x64": {
+      "archive": "dotnet-sdk-10.0.404-win-x64.zip",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-win-x64.zip",
+      "bytes": 303618098,
+      "sha256": "f94f02eb8451605a893164bbd9c14e7f00ac8914c370c322822e6ac91b106bcc",
+      "sha512": "330ddd2665b43cd2e428216a0d8ea1ac7bb19b5434fdc530e62010dc3b52823a620bf95489d628e1ed6f5122401793ee4887cca4a019122361a1231497f632ee",
+      "regularFiles": 5578,
+      "expandedBytes": 812144112,
+      "host": "dotnet.exe",
+      "hostSha256": "0a1b7ca731245de1f267a9c3c4d1ef8705e0821923fcdd6e0d61c31132f51240"
+    },
+    "linux-x64": {
+      "archive": "dotnet-sdk-10.0.404-linux-x64.tar.gz",
+      "url": "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.404/dotnet-sdk-10.0.404-linux-x64.tar.gz",
+      "bytes": 243138887,
+      "sha256": "c0610757a818fde4b960d27a0ac421f273068a05dc5ec7abafc01dbf84e9cb4d",
+      "sha512": "577d0eb17fec33d029104c5c63a1ab0accc3e28776274abef2218dbac5af18d2109b5406d26b31d76f5c245215e3ba0926a94c20246c672c41847c9e1eb1dc50",
+      "regularFiles": 4907,
+      "expandedBytes": 644980579,
+      "host": "dotnet",
+      "hostSha256": "99eb018192769d9964612afa04914e3c56187d87de1918426c0ade866db467a8"
+    }
+  },
+  "artifactBudget": {
+    "maxEvents": 3,
+    "maxRunnerMinutes": 120,
+    "maxAggregateMiB": 226,
+    "ordinaryDays": 3,
+    "tagManualDays": 7,
+    "maxArchiveMiBPerRid": 48,
+    "maxProofMiBPerRid": 1,
+    "maxSourceArchiveMiB": 1,
+    "maxStageReserveMiB": 1,
+    "eventEnvelopeMiB": {
+      "source": 0,
+      "manual": 112,
+      "tag": 112,
+      "total": 224,
+      "headroom": 2
+    }
+  },
+  "status": "HOSTED_PROFILE_SOURCE_ONLY_ACTUAL_RUN_PROOF_REQUIRED",
+  "transport": {
+    "artifactUploads": false,
+    "sourceCacheWrites": false,
+    "cacheActionCommit": "55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "cachePath": "artifacts/project08-handoff/<rid>",
+    "proofRawBytes": 1048576,
+    "proofFramedBytes": 2097152,
+    "completeJobLogBytes": 33554432,
+    "rawCarrierMiBPerRid": 49,
+    "compressedEntryMiBPerRid": 56,
+    "maxCarrierEntries": 4,
+    "compressedEntriesMiBTotal": 224,
+    "envelopeReserveMiB": 2,
+    "maxNewCacheMiBTotal": 226,
+    "cacheLifecycle": "Platform default; no expiration, settings or cleanup change",
+    "sourceZipBytes": 1048576
+  }
+}
