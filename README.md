@@ -1,12 +1,12 @@
 # FIX Session Recovery Harness
 
-Four guided **synthetic loopback** cases around pinned QuickFIX/n1.14.1. See what
+Four guided **synthetic loopback** cases around pinned QuickFIX/n 1.14.1. See what
 happens to a sequence gap, a duplicate and a stored resend, then inspect the raw
 wire and worker receipts. This wraps an existing engine; it is not a new FIX engine.
 
 | Engineering decision | Observable proof in the demo |
 | --- | --- |
-| Hold an out-of-sequence News until its gap is filled | ResendRequest covering2, callback order GAP2 then GAP3 |
+| Hold an out-of-sequence News until its gap is filled | ResendRequest covering 2, callback order GAP2 then GAP3 |
 | Repeating an accepted News must not trigger another callback in this case | Valid PossDup/OrigSendingTime repeat plus a subsequent session barrier; callbacks remain exactly those two |
 | A resend preserves the original application body and sequence | News2/3 replay, PossDupFlag=Y and original SendingTime retained as OrigSendingTime |
 | An admin GapFill skips a missing slot without inventing News | GapFill2 to3, callbacks GAPFILL3 then GAPFILL5, persisted nextTarget8 |
