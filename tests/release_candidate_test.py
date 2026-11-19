@@ -26,8 +26,8 @@ class PublicationGateTests(unittest.TestCase):
     def test_missing_native_proof_fails(self):
         with self.assertRaises((ValueError, KeyError)):
             module.check_stage({'schema': 'project08-draft-stage-v1', 'repository': module.REPO,
-                                'tag': module.TAG, 'commit': 'a'*40, 'sdk': '10.0.404',
-                                'runtime': '10.0.15', 'reportSchema': 'fix-session-harness-report-v2',
+                                'tag': module.TAG, 'commit': 'a'*40, 'sdk': '11.0.100',
+                                'runtime': '11.0.0', 'reportSchema': 'fix-session-harness-report-v2',
                                 'nativeProofs': {}, 'assets': {}})
     def test_mismatched_gate_never_publishes(self):
         github = Mock()

@@ -6,7 +6,7 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = 'pouriajamali/fix-session-recovery-harness'
-TAG = 'v0.1.0-preview.5'
+TAG = 'v0.1.0-preview.6'
 PREFIX = 'fix-session-recovery-harness-' + TAG
 ARCHIVES = {PREFIX + '-win-x64.zip', PREFIX + '-linux-x64.tar.gz', PREFIX + '-source.zip'}
 INITIAL = ARCHIVES | {'SHA256SUMS.txt', 'SIGNING-PUBLIC-KEY.pub'}
@@ -107,7 +107,7 @@ def assets_by_name(release, expected, draft):
 def check_stage(stage):
     require(stage['schema'] == 'project08-draft-stage-v1' and stage['repository'] == REPO and
             stage['tag'] == TAG and len(stage['commit']) == 40 and
-            stage['sdk'] == '10.0.404' and stage['runtime'] == '10.0.15' and
+            stage['sdk'] == '11.0.100' and stage['runtime'] == '11.0.0' and
             stage['reportSchema'] == 'fix-session-harness-report-v2', 'Stage identity')
     require(set(stage['nativeProofs']) == {'win-x64', 'linux-x64'} and
             set(stage['assets']) == INITIAL, 'Missing native/stage identities')
@@ -160,9 +160,9 @@ def verify_native(path, stage, rid):
     members = archive_members(path)
     manifest = json.loads(members.pop('BUILD-MANIFEST.json'), object_pairs_hook=unique_pairs)
     require(manifest['sourceCommit'] == stage['commit'] and manifest['sourceTree'] == stage['sourceTree'] and
-            manifest['rid'] == rid and manifest['version'] == '0.1.0-preview.5' and
+            manifest['rid'] == rid and manifest['version'] == '0.1.0-preview.6' and
             manifest['selfContained'] and not manifest['localCandidate'] and
-            manifest['sdkVersion'] == '10.0.404' and manifest['runtimeVersion'] == '10.0.15', 'Native identity')
+            manifest['sdkVersion'] == '11.0.100' and manifest['runtimeVersion'] == '11.0.0', 'Native identity')
     require(set(members) == {f['path'] for f in manifest['files']}, 'Member manifest')
     for item in manifest['files']:
         body = members[item['path']]
@@ -170,7 +170,7 @@ def verify_native(path, stage, rid):
     require(stage['commit'].encode() in members['session-harness.dll'], 'Embedded source identity')
     require(members['SIGNING-PUBLIC-KEY.pub'] == (ROOT / 'SIGNING-PUBLIC-KEY.pub').read_bytes(), 'Bundled key identity')
     config = json.loads(members['session-harness.runtimeconfig.json'])['runtimeOptions']
-    require(config['includedFrameworks'] == [{'name': 'Microsoft.NETCore.App', 'version': '10.0.15'}] and
+    require(config['includedFrameworks'] == [{'name': 'Microsoft.NETCore.App', 'version': '11.0.0'}] and
             'frameworks' not in config, 'Runtime identity')
 
 def verify_bytes(directory, stage, expected, asset_metadata):

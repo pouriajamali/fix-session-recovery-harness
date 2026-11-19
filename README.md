@@ -16,8 +16,19 @@ These are observations of four fixed cases, not a general exactly-once, crash
 durability, counterparty certification or production guarantee. The
 [decision/test map](docs/CASE-STUDY.md) identifies the tests and limitations.
 
-Source/release version: **0.1.0-preview.5**, SDK10.0.404/runtime10.0.15, report-v2.
-[Preview5 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5).
+Source/release version: **0.1.0-preview.6**, SDK11.0.100/runtime11.0.0, C#15, report-v2.
+[Preview6 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.6).
+
+The November19,2026 technology upgrade retains QuickFIX/n1.14.1, its dictionary,
+all four fixed scenarios, wire/report/process contracts and bounded native controls.
+.NET11 is an [active supported release through November14,2028](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core);
+SDK11.0.100/runtime11.0.0 is the [current servicing pair](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).
+NuGet signatures are required and auditing remains enabled for all dependencies.
+Qualification, tests and consumer checks use actual local Windows/Ubuntu processes;
+GitHub Actions CI was not run, by owner instruction. See the
+[maintenance notes](docs/RELEASE-v0.1.0-preview.6.md) for host and provenance limits.
+The [frozen preview5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
+retains its separately qualified SDK404/runtime15 and signed assets.
 
 Install only from a published release containing `SHA256SUMS.txt`,
 `SHA256SUMS.txt.sig` and the pinned public key; follow
@@ -97,17 +108,17 @@ JSON or a nonzero process exit must not be treated as success.
 
 ## Build and test
 
-Candidate source pins SDK10.0.404 and runtime10.0.15. Local execution first requires the
-manager's exact input/profile admission. The fixed project08 launcher enforces the
-approved phase, owned E outputs, canonical lane and actual Job/cgroup limits; no
-uncapped fallback or direct SDK probe/bootstrap is supported. Windows256processes
-and Linux256tasks are different limits, not an equal thread-cap claim.
+Use the pinned SDK11.0.100/runtime11.0.0 and stable C#15 for this source.
+Restore requires repository-signed NuGet packages and all-package vulnerability
+auditing. The release's local qualification uses independent source/input-bound
+Windows Job and Ubuntu cgroup phases with actual CPU2/2GiB readbacks and a shared
+serial execution lane. Windows256processes and Linux256tasks are different caps.
+Source commands alone do not establish those qualification observations.
 
-Private local qualification uses its separately admitted fixed launcher.
-Hosted qualification uses `tools/project08_hosted.py`, the SDK404 archive/member
-pins and a fresh actual matching-OS Job/cgroup proof; it does not reuse a local
-workspace admission or SDK11. Source/CI authorization is a separate gate.
-The equivalent bounded source commands inside an admitted phase are:
+The original SDK404 launcher/profile and hosted transport tools belong to frozen
+preview5 evidence. They are not an SDK11 admission or the preview6 delivery route.
+GitHub Actions was not run for preview6. The source commands within the controlled
+matching-OS phases are:
 
 ```sh
 # Example inside the admitted phase: linux-x64; use win-x64 on Windows.
@@ -174,7 +185,9 @@ completed semantic failure/exit2. Timeout, bad frame or child/protocol failure i
 incomplete/exit1 and cannot pass that negative test. No negative fixture option is
 available in the consumer CLI. Source preparation alone proves none of these results.
 
-Hosted proof acceptance requires the complete fixed 74 test observations and
+## Legacy preview5 hosted evidence
+
+Hosted proof acceptance for frozen preview5 requires the complete fixed 74 test observations and
 13 own package consumer checks, plus the complete seven-test offline release
 suite. Only the named Windows symlink privilege case may skip. Producer and
 release aggregation validate closed finite schemas, attempt1/source/OS/RID,

@@ -10,7 +10,7 @@ def run_checked(command,**kwargs):
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--package',type=Path,required=True);parser.add_argument('--work',type=Path,required=True);parser.add_argument('--commit',required=True);parser.add_argument('--local-candidate',action='store_true');a=parser.parse_args()
  package=a.package.resolve();work=a.work.resolve();work.mkdir(parents=True,exist_ok=False);m=json.loads((package/'BUILD-MANIFEST.json').read_text(encoding='utf-8'))
- assert m['sdkVersion']=='10.0.404' and m['runtimeVersion']=='10.0.15'
+ assert m['sdkVersion']=='11.0.100' and m['runtimeVersion']=='11.0.0'
  assert m['sourceCommit']==a.commit and m['selfContained'] and m['originalLicense']=='present' and m['rid']==('win-x64' if os.name=='nt' else 'linux-x64')
  if not a.local_candidate:assert not m['localCandidate']
  assert {p.relative_to(package).as_posix() for p in package.rglob('*') if p.is_file()}=={f['path'] for f in m['files']}|{'BUILD-MANIFEST.json'}
@@ -20,8 +20,10 @@ def main():
  assert sha(package/'vendor/QUICKFIX-LICENSE')=='dcc5ff99d3d63cc29cfc6e9d885641bf814acfb485d1f4893623b1a24819de30'
  for name in ['CONTRIBUTING.md','docs/CONTRACT.md','docs/CASE-STUDY.md','PROVENANCE.md','LICENSE']:assert (package/name).is_file()
  assert 'This product includes software developed by quickfixengine.org' in (package/'README.md').read_text(encoding='utf-8')
- config=json.loads((package/'session-harness.runtimeconfig.json').read_text(encoding='utf-8'))['runtimeOptions'];assert config.get('includedFrameworks')==[{'name':'Microsoft.NETCore.App','version':'10.0.15'}] and 'frameworks' not in config
+ config=json.loads((package/'session-harness.runtimeconfig.json').read_text(encoding='utf-8'))['runtimeOptions'];assert config.get('includedFrameworks')==[{'name':'Microsoft.NETCore.App','version':'11.0.0'}] and 'frameworks' not in config
  assert sha(package/'RUNTIME-PACKS.json')==m['runtimePackPinsSha256']
+ pins=json.loads((package/'RUNTIME-PACKS.json').read_text(encoding='utf-8'))
+ for name,digest in pins['frameworkProvidedAssemblies'].items():assert sha(package/(name+'.dll'))==digest
  for name,value in m['runtimeLockHashes'].items():assert sha(package/'runtime-locks'/name)==value
  checks=['package-manifest-dictionary-licenses-and-document-links'];exe=package/('session-harness.exe' if os.name=='nt' else 'session-harness')
  env=dict(os.environ,DOTNET_ROOT=str(work/'no-installed-dotnet'),DOTNET_ROOT_X64=str(work/'no-installed-dotnet'),DOTNET_MULTILEVEL_LOOKUP='0')

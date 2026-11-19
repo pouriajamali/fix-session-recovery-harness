@@ -1,7 +1,7 @@
 <Project><PropertyGroup>
-  <TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+  <TargetFramework>net11.0</TargetFramework><LangVersion>15.0</LangVersion><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
   <TreatWarningsAsErrors>true</TreatWarningsAsErrors><RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   <NuGetLockFilePath Condition="'$(RuntimeIdentifier)' != ''">$(MSBuildThisFileDirectory)locks/runtime/$(RuntimeIdentifier)/$(MSBuildProjectName).lock.json</NuGetLockFilePath>
-  <Version>0.1.0-preview.5</Version><RuntimeFrameworkVersion>10.0.15</RuntimeFrameworkVersion>
+  <Version>0.1.0-preview.6</Version><RuntimeFrameworkVersion>11.0.0</RuntimeFrameworkVersion>
   <Copyright>Copyright (c) 2026 Pouria Jamali</Copyright><DebugType>embedded</DebugType>
 </PropertyGroup></Project>

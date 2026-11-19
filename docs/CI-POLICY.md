@@ -274,3 +274,64 @@ Only event9/40runner-min is added: max9events/360minutes. All prior8/320 and
 448MiB reservations stay retained; cache max450MiB, actual6entries218657330B.
 No new artifacts/cache/tag/draft; policy5+native30+readonlymetadata5 fits40.
 No automatic tenth/manual/rerun/refund/reset/paid capacity/settings is granted.
+
+## November 17, 2026 servicing maintenance
+
+The official .NET10 download metadata still identifies SDK10.0.404 and
+runtime10.0.15 as current. .NET10 remains active LTS through November 14, 2028.
+QuickFIX/n1.14.1 includes net10.0 assets and upstream .NET10 support; its Core and
+FIX44 pins and the locked dependency graph are retained. The official NuGet
+registration metadata for the four locked application packages listed no
+deprecation or vulnerability entries at this check. This is a point-in-time
+metadata observation, not a security certification or a claim about future fixes.
+
+GitHub retired Node20 for JavaScript actions on September 23, 2026. Checkout is
+now pinned to v7.0.1 commit3d3c42e5aac5ba805825da76410c181273ba90b1 and Python
+setup to v6 commit ece7cb06caefa5fff74198d8649806c4678c61a1; both action metadata
+files declare Node24. The already qualified cache commit
+55cc8345863c7cc4c66a329aec7e433d2d1c52a9 also declares Node24 and is retained.
+
+No engine, dictionary, report-v2/process-v1 schema, fixture, native source, SDK
+bootstrap, dependency lock, runner, trigger, permission, concurrency, timeout or
+containment cap changes. The existing workflow classifies this pipeline change
+as full native validation. One source push runs the established bounded matrix;
+source jobs save no cache or artifacts. No tag/manual event or duplicate binary
+release is part of this maintenance. Existing runtime preview5 keeps its frozen
+commit and signed assets; source/tooling CI qualifies its own new commit only.
+
+References: [official .NET downloads](https://dotnet.microsoft.com/en-us/download/dotnet/10.0),
+[.NET support policy](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core),
+[QuickFIX/n release notes](https://github.com/connamara/quickfixn/blob/master/RELEASE_NOTES.md),
+[NuGet Core metadata](https://www.nuget.org/packages/QuickFIXn.Core/1.14.1),
+[Node20 retirement](https://github.blog/changelog/2026-09-23-node-20-is-no-longer-available-in-github-actions/),
+[checkout v7.0.1](https://github.com/actions/checkout/releases/tag/v7.0.1),
+[Python setup v6](https://github.com/actions/setup-python/tree/ece7cb06caefa5fff74198d8649806c4678c61a1).
+
+## Owner-authorized preview6 local technology delivery
+
+For the November19,2026 upgrade, GitHub Actions is prohibited. No dispatch,
+rerun or automatically triggered push/tag/release is permitted. Source commits
+use [skip ci] after actual event review. Required protection/statuses are not
+bypassed. The historical hosted SDK404 producer/profile/transport remains frozen
+preview5 evidence; it does not qualify SDK11 or supply local host admission.
+
+Preview6 uses SDK11.0.100, runtime11.0.0, net11.0 and C#15. QuickFIX/n1.14.1
+and both QuickFIX package versions/content hashes remain pinned. SDK11 supplies
+Logging/DI abstractions in Microsoft.NETCore.App11 and prunes their old8.x NuGet
+entries; runtime-package hashes bind the actual replacement assemblies. Actual
+SDK-generated portable/RID locks and runtime pack/notices identities replace
+net10 data. NuGet signatures use the already established NuGet.org repository
+certificate, with allowUntrustedRoot=false and auditSources/all-package auditing.
+No operating-system truststore or security setting changes.
+
+Local phases acquire the existing canonical lease independently and serially;
+execution time starts after atomic claim. Own suspended Windows Job and Linux
+cgroup membership/readbacks enforce CPU2/2GiB/256processes-or-tasks/Linuxswap0,
+original finite phase ceilings and cumulative900s/RID. Reused input receipts do
+not transfer producer host/PID/caps. Native tests distinguish completed semantic
+failure2 from incomplete1 and natural clean exit/store closure from cleanup.
+Matching-OS archive extraction/consumer checks and known-key checksum signing
+are required. Local outcomes are never labelled successful CI. Old release/tag/
+source/signature evidence stays immutable; no new feature or M2 is introduced.
+
+[Official .NET11 framework-provided Extensions compatibility change](https://learn.microsoft.com/en-us/dotnet/core/compatibility/extensions/11/extensions-in-shared-framework) explains this necessary SDK-generated graph delta.

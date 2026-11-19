@@ -25,7 +25,7 @@ jobs:
     outputs:
       native: ${{ steps.scope.outputs.native }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; Node24
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -65,8 +65,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; Node24
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6; Node24
         with:
           python-version: '3.12'
       - name: Fresh hosted SDK404 and exact native source qualification
@@ -118,7 +118,7 @@ jobs:
       # The audited helper performs only fixed GETs; no mutation endpoint.
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; Node24
         with:
           persist-credentials: false
       - name: Verify actual Actions-token draft list and numeric-ID metadata
@@ -136,8 +136,8 @@ jobs:
       # Read only this run's completed producer logs/cache metadata before restoration.
       actions: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1; Node24
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6; Node24
         with:
           python-version: '3.12'
       - name: Verify tools and empty isolated carrier destinations

@@ -1,18 +1,22 @@
 {
   "schema": "project08-runtime-packs-v1",
-  "sdk": "10.0.404",
-  "runtime": "10.0.15",
+  "sdk": "11.0.100",
+  "runtime": "11.0.0",
   "rid": "win-x64",
   "packs": [
     {
       "id": "Microsoft.NETCore.App.Runtime.win-x64",
-      "version": "10.0.15",
-      "nugetContentSha512": "MEGAkRGHrAXYA2t/Lo0mDxH+/O5NLqgWTcVh70iOZJTpoOCL/jKfOgDqYoDi3W9WcnviL4DhMl+5lWC8cxttSw==",
+      "version": "11.0.0",
+      "nugetContentSha512": "ZZQq6Upo0OyYCtNDsF/n4msWEOetdGlbPim6KMdKVQpJ+6pliMmVcw8sIIf7WJZhbc5FQAA9q9Xavs0I/RubSA==",
       "notices": {
         "LICENSE.TXT": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
-        "THIRD-PARTY-NOTICES.TXT": "6d15e10a101c6bfff2ab4429ed061bf76c456fc4b23ad6b03e0d0f8377148a21"
+        "THIRD-PARTY-NOTICES.TXT": "e3a241a6cf35167d82bf7e081de9641c59d10d2dbd8824409817bed31980d407"
       }
     }
   ],
-  "apphostTrust": "SDK404 producer inventory plus exact published apphost member hash; runtime NuGet lock is not apphost build proof"
+  "frameworkProvidedAssemblies": {
+    "Microsoft.Extensions.Logging.Abstractions": "ab908044cff27b54e0cee8975b5b22083a9434ff6baeb69320ee80c9313afe1c",
+    "Microsoft.Extensions.DependencyInjection.Abstractions": "683a9a89b52eddd3591bae90a9b029ebe45d70c6942e0db3fa70e16e441367d3"
+  },
+  "apphostTrust": "SDK11 input identity plus exact published apphost member hash; runtime NuGet lock is not apphost build proof"
 }
