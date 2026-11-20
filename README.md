@@ -30,6 +30,20 @@ GitHub Actions CI was not run, by owner instruction. See the
 The [frozen preview5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
 retains its separately qualified SDK404/runtime15 and signed assets.
 
+Native downloads use **five binary parts per OS, at most 8MiB each**.
+[Join and verify on Windows or Ubuntu](docs/SPLIT-DOWNLOADS-v0.1.0-preview.6.md)
+before extracting. The joined archives retain the tested runtime source
+5bb0931151ddf1f09ad17f80a752fdeabe041950; source ZIP and signed tag are unchanged.
+The original checksum/signature files are preserved, with separately signed
+PARTS-MANIFEST.json and PARTS-SHA256SUMS.txt for transport.
+
+| Bundle | Download all five parts |
+| --- | --- |
+| Ubuntu x64 | [1](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-linux-x64.tar.gz.part001) · [2](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-linux-x64.tar.gz.part002) · [3](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-linux-x64.tar.gz.part003) · [4](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-linux-x64.tar.gz.part004) · [5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-linux-x64.tar.gz.part005) |
+| Windows x64 | [1](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part001) · [2](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part002) · [3](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part003) · [4](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part004) · [5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part005) |
+
+[fix-session-recovery-harness-v0.1.0-preview.6-source.zip](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-source.zip), [SHA256SUMS.txt](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SHA256SUMS.txt), [SHA256SUMS.txt.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SHA256SUMS.txt.sig), [SIGNING-PUBLIC-KEY.pub](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SIGNING-PUBLIC-KEY.pub), [PARTS-MANIFEST.json](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-MANIFEST.json), [PARTS-MANIFEST.json.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-MANIFEST.json.sig), [PARTS-SHA256SUMS.txt](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-SHA256SUMS.txt), [PARTS-SHA256SUMS.txt.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-SHA256SUMS.txt.sig)
+
 Install only from a published release containing `SHA256SUMS.txt`,
 `SHA256SUMS.txt.sig` and the pinned public key; follow
 [checksum/signature verification](PROVENANCE.md). Source, a tag or CI success
