@@ -1,8 +1,72 @@
 # FIX Session Recovery Harness
 
-Four guided **synthetic loopback** cases around pinned QuickFIX/n 1.14.1. See what
-happens to a sequence gap, a duplicate and a stored resend, then inspect the raw
-wire and worker receipts. This wraps an existing engine; it is not a new FIX engine.
+Inspect how a FIX session handles sequence 3 arriving before 2, a duplicate,
+a stored resend and a restart from saved state. Four guided **synthetic loopback**
+cases use pinned QuickFIX/n 1.14.1; raw wire traces and worker receipts show what
+happened. This wraps the existing engine.
+
+[Signed preview6 downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.6)
+· [Exact runtime source: 5bb09311](https://github.com/pouriajamali/fix-session-recovery-harness/tree/5bb0931151ddf1f09ad17f80a752fdeabe041950)
+· [Join and verify the split downloads](docs/SPLIT-DOWNLOADS-v0.1.0-preview.6.md)
+
+Version **0.1.0-preview.6**: self-contained runtime 11.0.0, SDK 11.0.100/C#15
+for source builds, report-v2. These are four fixed News/admin cases; they do not
+establish general exactly-once behavior, crash durability, counterparty
+certification or a production guarantee.
+
+## Try it
+
+1. Download all **five parts for your OS** and the seven small verification files
+   from the [release](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.6).
+   Follow the [Windows/Ubuntu join and signature checks](docs/SPLIT-DOWNLOADS-v0.1.0-preview.6.md)
+   before extracting.
+2. Keep the extracted self-contained bundle together and open a terminal there.
+   No installed .NET SDK/runtime is needed; native OS prerequisites still apply.
+   Existing-host checks are not empty-OS installation proof.
+3. Run the existing four-case demo. The output directory must not exist.
+
+Windows x64:
+
+```powershell
+.\session-harness.exe demo "new demo output"
+Get-Content ".\new demo output\summary.txt"
+```
+
+Ubuntu24.04/glibc x64:
+
+```sh
+./session-harness demo "new demo output"
+cat "new demo output/summary.txt"
+```
+
+A successful run exits 0 and starts the generated `summary.txt` with:
+
+```text
+FIX Session Recovery Harness: pass
+```
+
+The aggregate `summary.json` has `complete=true`, `outcome="pass"` and `exitCode=0`.
+Its four cases are gap, resend, restart and gapfill. For example, the gap case
+requests the missing sequence 2 and delivers GAP2 then GAP3; the GapFill case
+skips a slot without fabricating News2.
+
+Each scenario retains raw `peer-to-engine.fix` / `engine-to-peer.fix`, `events.json`,
+worker receipts and hashes. Raw received bytes are retained even when they do
+not form a valid frame; events list only successfully sent/validated received
+frames. Fragmentation does not create an unbounded event list.
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | All four complete expected observations passed (candidate) |
+| 2 | A completed bounded expectation failed; no successful demo claim |
+| 1 | Incomplete/unsupported/I/O, deadline, process, protocol or report-write failure |
+
+Always read overall outcome, `complete` and the reason; child exit0 alone is
+insufficient. Kill/timeout failure teardown is never counted as a clean stop.
+Reports publish JSON last, but the pair is not power-loss-atomic. Missing/invalid
+JSON or a nonzero process exit must not be treated as success.
+
+## What the demo checks
 
 | Engineering decision | Observable proof in the demo |
 | --- | --- |
@@ -12,23 +76,9 @@ wire and worker receipts. This wraps an existing engine; it is not a new FIX eng
 | An admin GapFill skips a missing slot without inventing News | GapFill2 to3, callbacks GAPFILL3 then GAPFILL5, persisted nextTarget8 |
 | A controlled process restart must use released, persisted state | First child exits and drains, parent acquires exclusive store handles, second child continues sequence and replays prior News |
 
-These are observations of four fixed cases, not a general exactly-once, crash
-durability, counterparty certification or production guarantee. The
-[decision/test map](docs/CASE-STUDY.md) identifies the tests and limitations.
+See the [decision/test map](docs/CASE-STUDY.md) and [four-case contract](docs/CONTRACT.md) for assertions and limits.
 
-Source/release version: **0.1.0-preview.6**, SDK11.0.100/runtime11.0.0, C#15, report-v2.
-[Preview6 availability and signed downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.6).
-
-The November19,2026 technology upgrade retains QuickFIX/n1.14.1, its dictionary,
-all four fixed scenarios, wire/report/process contracts and bounded native controls.
-.NET11 is an [active supported release through November14,2028](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core);
-SDK11.0.100/runtime11.0.0 is the [current servicing pair](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).
-NuGet signatures are required and auditing remains enabled for all dependencies.
-Qualification, tests and consumer checks use actual local Windows/Ubuntu processes;
-GitHub Actions CI was not run, by owner instruction. See the
-[maintenance notes](docs/RELEASE-v0.1.0-preview.6.md) for host and provenance limits.
-The [frozen preview5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
-retains its separately qualified SDK404/runtime15 and signed assets.
+## Downloads and verification
 
 Native downloads use **five binary parts per OS, at most 8MiB each**.
 [Join and verify on Windows or Ubuntu](docs/SPLIT-DOWNLOADS-v0.1.0-preview.6.md)
@@ -49,47 +99,6 @@ Install only from a published release containing `SHA256SUMS.txt`,
 [checksum/signature verification](PROVENANCE.md). Source, a tag or CI success
 alone does not establish publication. If the release page or signature is
 missing, publication is incomplete; do not bypass verification.
-
-Legacy/frozen preview: **v0.1.0-preview.1** (three cases/runtime14).
-[Legacy preview1 downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
-belong to that frozen version.
-
-## Try it
-
-Extract the complete self-contained bundle and keep its files together. No
-installed .NET SDK/runtime is needed; supported native OS prerequisites still
-apply. Existing-host/CI tests are not empty-OS installation proof.
-
-Windows x64:
-
-```powershell
-.\session-harness.exe --version
-.\session-harness.exe demo "new demo output"
-```
-
-Ubuntu24.04/glibc x64:
-
-```sh
-./session-harness --version
-./session-harness demo "new demo output"
-```
-
-The directory must not exist. Read `summary.txt` and `summary.json`. Each scenario
-has raw `peer-to-engine.fix` / `engine-to-peer.fix`, a readable `events.json`,
-complete worker receipts and hashes. Raw received bytes are retained even when
-they do not form a valid frame; events list only successfully sent/validated
-received frames. Fragmentation does not create an unbounded event list.
-
-| Exit | Meaning |
-| --- | --- |
-| 0 | All four complete expected observations passed (candidate) |
-| 2 | A completed bounded expectation failed; no successful demo claim |
-| 1 | Incomplete/unsupported/I/O, deadline, process, protocol or report-write failure |
-
-Always read overall outcome, `complete` and the reason; child exit0 alone is
-insufficient. Kill/timeout failure teardown is never counted as a clean stop.
-Reports publish JSON last, but the pair is not power-loss-atomic. Missing/invalid
-JSON or a nonzero process exit must not be treated as success.
 
 ## Boundaries
 
@@ -176,7 +185,7 @@ and dependencies retain their own notices. No private/shared/employer/customer
 code, dictionary, contract or data is included. No deployment, market study,
 customer, revenue, security certification or independent-skill claim is made.
 
-[CI resource policy](docs/CI-POLICY.md): documentation-only changes get real lightweight document/pipeline checks; source, tag and manual runs retain native validation. Previously published runtime tags and release assets remain immutable.
+[CI resource policy](docs/CI-POLICY.md) defines hosted validation scope; preview6 qualification and the current documentation delivery use the owner-authorized local route without running Actions. Published runtime tags and release assets remain immutable.
 
 ## Source readability
 
@@ -184,89 +193,21 @@ The current source expands compact C# layout for review. The legacy preview1 lin
 
 To reproduce a published package, use the exact source archive/commit identified by that release's signed checksums and provenance. The [legacy/frozen v0.1.0-preview.1 source](https://github.com/pouriajamali/fix-session-recovery-harness/tree/330ae8f927395564937ed1043510d60a87b9987d) (`330ae8f927395564937ed1043510d60a87b9987d`) belongs specifically to preview1/runtime14. Review later `main` snapshots separately from those frozen release commits.
 
-## Candidate process diagnostics
+## Qualification and release history
 
-Each worker phase adds a bounded `<phase>-process.json` with schema
-`fix-session-harness-process-v1`, bound nonce/scenario/phase/session/port/PID/start
-identity, observed nullable exit code, drain and forced-cleanup state. The strict
-worker receipt remains schema1 and the aggregate report is
-`fix-session-harness-report-v2`. An unobserved exit is unknown; cleanup never
-proves cleanStop/storeClosed. Diagnostic/report-write failure makes the run
-incomplete and preserves the original cause where output remains writable.
+Preview6 used actual local Windows/Ubuntu qualification; GitHub Actions CI was
+not run, by owner instruction. [Maintenance notes](docs/RELEASE-v0.1.0-preview.6.md)
+retain native counts, host/resource limits, dependency decisions and process
+diagnostics. Windows11 26H2 vendor support remains unconfirmed; the Ubuntu host
+was existing Ubuntu24.04/WSL2.
 
-The test-only NewSeqNo4 variant must finish barriers/logout and produce a
-completed semantic failure/exit2. Timeout, bad frame or child/protocol failure is
-incomplete/exit1 and cannot pass that negative test. No negative fixture option is
-available in the consumer CLI. Source preparation alone proves none of these results.
+The [frozen preview5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
+retains its separately qualified SDK404/runtime15 and signed assets.
 
-## Legacy preview5 hosted evidence
+The [preview5 notes](docs/RELEASE-v0.1.0-preview.5.md#archived-qualification-and-release-operations)
+retain the complete historical hosted runs, failures, transport decisions and
+independent recovery boundaries. These do not establish preview6 CI success.
 
-Hosted proof acceptance for frozen preview5 requires the complete fixed 74 test observations and
-13 own package consumer checks, plus the complete seven-test offline release
-suite. Only the named Windows symlink privilege case may skip. Producer and
-release aggregation validate closed finite schemas, attempt1/source/OS/RID,
-same-commit SDK404 member/source pins, observed capped SDK404/runtime15 results,
-and actual package archive/manifest byte identities. Public finite observations
-are separate from nonce-salted commitments to private source evidence; those
-commitments are not inspectable SDK input or independent execution proof.
-
-Source CI exports the six finite native-proof files through bounded framed logs,
-with no artifact or cache writes. Tag/manual transport uses only an exact
-same-run cache handoff; its expected digest and file hashes come from trusted
-producer outputs outside the cache. Aggregation requires authenticated actual
-save evidence, exact availability/key outputs and actual archive/proof byte
-bindings before draft staging. DRAFT-STAGE is a typed finite log frame. No SDK or
-execution result is reused from cache. The prepared profile does not establish a configured cache limit;
-availability and the <=450MiB envelope remain actual-event gates.
-
-Preview5 recovery details are described in the
-[preview5 release notes](docs/RELEASE-v0.1.0-preview.5.md).
-[Preview2 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43624690595)
-completed both native jobs, then failed in aggregate expect-carriers before
-restore or draft creation. Separately, the preview2 reader did not admit the observed
-`refs/heads/refs/tags/v0.1.0-preview.2` representation. Preview5 admits only its
-two fixed expected-ref representations and requires its own source/tag evidence.
-The preview2 tag, source and evidence stay immutable. Use the
-[preview5 release page](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.5)
-for availability and actual release evidence. Publication must be established
-by its published, verified signed assets; source/tag/CI alone is insufficient.
-
-[Preview3 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43632757157)
-completed both native jobs, but aggregate expect-carriers failed before restore
-or draft creation. Its first failed guard and earlier Actions-token HTTP/CLI
-response are UNKNOWN. Later captured metadata and an offline replay pass do not
-reconstruct that failure. Preview4 replaces the opaque reader with bounded
-typed HTTPS and finite first-stage diagnostics; this is not proof that the
-unknown earlier cause has been fixed. Its tag-only READ_ONLY_TRANSPORT_PREFLIGHT
-checks same-SHA source-run log and cache-read access before SDK/native work.
-
-[Preview4 tag CI](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43642620238)
-stopped in READ_ONLY_TRANSPORT_PREFLIGHT at READINESS_JOB_LOG/HTTP_STATUS415,
-before SDK/native/cache/draft/signing work. Its API log request used
-Accept: application/octet-stream. A paired read using the same endpoint,
-API version and root credential, varying only Accept, returned415 for octet
-and302 for application/vnd.github+json. Preview5 uses JSON Accept for every
-api.github.com GET, including log redirect requests; only unsigned storage
-requests use octet-stream. That root-credential comparison is not future
-Actions-token success, and does not determine the older tag2/tag3 failures.
-Preview5 still requires its own actual Actions-token READY and native/draft/
-signature/download evidence; source or mock tests alone do not establish delivery.
-
-## Release tooling and independent draft recovery
-
-The frozen preview5 runtime/source tag points to commit
-[1064b609](https://github.com/pouriajamali/fix-session-recovery-harness/commit/1064b609564ff9df44cf08b273685e418eef2d4a).
-Later release-tooling commits on main do not replace that runtime or its assets.
-Its [source CI43645342809](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43645342809)
-succeeded. [Tag CI43646245026](https://github.com/pouriajamali/fix-session-recovery-harness/actions/runs/43646245026)
-passed real Actions-token readiness, both native jobs and archive/source checks,
-then failed after creating the five-asset draft: the by-tag endpoint returned404
-for the unpublished draft. The whole tag run remains FAILURE.
-
-Corrected tooling uses authenticated bounded list -> unique exact draft/tag ->
-numeric ID. An independently derived stage uses actual five-file downloads,
-original native proofs, all53 source Git blobs and separate provenance; it is
-never original CI DRAFT-STAGE or a retrospective tag-CI success claim.
-[Recovery method and limits](docs/PREVIEW5-DRAFT-METADATA-RECOVERY.md) describe
-the separate exact tooling CI and signing/publication gates. New-head CI builds
-validate tooling changes and are not promoted as preview5 runtime assets.
+Legacy/frozen preview: **v0.1.0-preview.1** (three cases/runtime14).
+[Legacy preview1 downloads](https://github.com/pouriajamali/fix-session-recovery-harness/releases/tag/v0.1.0-preview.1)
+belong to that frozen version.

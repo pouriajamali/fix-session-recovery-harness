@@ -48,7 +48,7 @@ Each native archive uses five <=8MiB binary transport parts. Joining them recove
 the exact originally tested and signed ZIP/tar.gz. Original SUMS/SIG remain
 unchanged. Separate manifest/checksums and known-key signatures authenticate the
 parts; the small source ZIP remains a direct download. The signed tag/source ZIP
-retain the runtime commit. Current main adds only transport documentation.
+retain the runtime commit. Later documentation on main does not change that runtime commit.
 
 Follow [Windows/Linux join and verification](SPLIT-DOWNLOADS-v0.1.0-preview.6.md).
 
@@ -58,3 +58,29 @@ Follow [Windows/Linux join and verification](SPLIT-DOWNLOADS-v0.1.0-preview.6.md
 | Windows x64 | [1](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part001) · [2](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part002) · [3](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part003) · [4](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part004) · [5](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-win-x64.zip.part005) |
 
 [fix-session-recovery-harness-v0.1.0-preview.6-source.zip](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/fix-session-recovery-harness-v0.1.0-preview.6-source.zip), [SHA256SUMS.txt](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SHA256SUMS.txt), [SHA256SUMS.txt.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SHA256SUMS.txt.sig), [SIGNING-PUBLIC-KEY.pub](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/SIGNING-PUBLIC-KEY.pub), [PARTS-MANIFEST.json](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-MANIFEST.json), [PARTS-MANIFEST.json.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-MANIFEST.json.sig), [PARTS-SHA256SUMS.txt](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-SHA256SUMS.txt), [PARTS-SHA256SUMS.txt.sig](https://github.com/pouriajamali/fix-session-recovery-harness/releases/download/v0.1.0-preview.6/PARTS-SHA256SUMS.txt.sig)
+
+## Toolchain qualification context
+
+The November19,2026 technology upgrade retains QuickFIX/n1.14.1, its dictionary,
+all four fixed scenarios, wire/report/process contracts and bounded native controls.
+.NET11 is an [active supported release through November14,2028](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core);
+SDK11.0.100/runtime11.0.0 is the [current servicing pair](https://dotnet.microsoft.com/en-us/download/dotnet/11.0).
+NuGet signatures are required and auditing remains enabled for all dependencies.
+Qualification, tests and consumer checks use actual local Windows/Ubuntu processes;
+GitHub Actions CI was not run, by owner instruction. See the
+[these maintenance notes](RELEASE-v0.1.0-preview.6.md) for host and provenance limits.
+
+## Candidate process diagnostics
+
+Each worker phase adds a bounded `<phase>-process.json` with schema
+`fix-session-harness-process-v1`, bound nonce/scenario/phase/session/port/PID/start
+identity, observed nullable exit code, drain and forced-cleanup state. The strict
+worker receipt remains schema1 and the aggregate report is
+`fix-session-harness-report-v2`. An unobserved exit is unknown; cleanup never
+proves cleanStop/storeClosed. Diagnostic/report-write failure makes the run
+incomplete and preserves the original cause where output remains writable.
+
+The test-only NewSeqNo4 variant must finish barriers/logout and produce a
+completed semantic failure/exit2. Timeout, bad frame or child/protocol failure is
+incomplete/exit1 and cannot pass that negative test. No negative fixture option is
+available in the consumer CLI. Source preparation alone proves none of these results.
